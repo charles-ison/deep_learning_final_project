@@ -1,6 +1,17 @@
 # Conditional Musical Accompaniment Generation
 AI 535 Deep Learning Final Project
 
+## Enviroment
+To avoid version control issues, use the following commands to load the python enviroment for this project:
+```bash
+module load python/3.10 cuda/11.7
+pip install -r requirements.txt
+```
+If you add pakages please run before committing:
+```bash
+pip freeze > requirements.txt
+```
+
 ## Files
 ### slakh-utils
 For easier version control, the `slakh-utils` is a submodule from this [repo](https://github.com/shawn120/slakh-utils/tree/4118ea16222d11d295496845e898cd497c7b7673). To update this submodule:
