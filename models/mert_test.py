@@ -14,4 +14,9 @@ processor = Wav2Vec2FeatureExtractor.from_pretrained("m-a-p/MERT-v0",trust_remot
 input_audio = torch.randn(10080).cuda()
 inputs = processor(input_audio, sampling_rate=resample_rate, return_tensors="pt")
 outputs = model(**inputs, output_hidden_states=True)
-print(outputs)
+
+all_layer_hidden_states = torch.stack(outputs.hidden_states).squeeze()
+last_hidden_state = outputs.last_hidden_state
+
+print(all_layer_hidden_states)
+print(last_hidden_state)
