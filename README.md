@@ -5,6 +5,7 @@ AI 535 Deep Learning Final Project
 To avoid version control issues, use the following commands to load the python enviroment for this project:
 ```bash
 module load python/3.10 cuda/11.7
+python3 -m venv env
 pip install -r requirements.txt
 ```
 If you add pakages please run before committing:
