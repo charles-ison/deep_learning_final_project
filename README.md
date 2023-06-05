@@ -6,6 +6,7 @@ To avoid version control issues, use the following commands to load the python e
 ```bash
 module load python/3.10 cuda/11.7
 python3 -m venv env
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 If you add pakages please run before committing:
