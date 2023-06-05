@@ -18,5 +18,8 @@ outputs = model(**inputs, output_hidden_states=True)
 all_layer_hidden_states = torch.stack(outputs.hidden_states).squeeze()
 last_hidden_state = outputs.last_hidden_state
 
-print(all_layer_hidden_states.shape) # [13 layer, Time steps, 768 feature_dim]
-print(last_hidden_state.shape)
+# print(all_layer_hidden_states)      # [13 layer, Time steps, 768 feature_dim]
+# print(all_layer_hidden_states[-1])
+# print(last_hidden_state)            # [1 layer, Time steps, 768 feature_dim]
+
+print(outputs)

@@ -22,6 +22,8 @@ class AudioTransformer(nn.Module):
             out_features=decoder_input_size
             )
 
+        # NOTE: Is this redundant?
+        # TODO: Investigate positional encodings. @Chase
         self.positional_encoding_layer = PositionalEncoder(
             d_model=dim_val,
             dropout=dropout

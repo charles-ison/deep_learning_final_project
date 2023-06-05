@@ -8,10 +8,10 @@ emb, codes, _ = encodec(audio, return_encoded = True) # (1, 10080) - 1 channel
 
 print(audio.shape)  # [batch_size, len(audio)]
 print(audio)
-print(emb.shape)    # [batch_size, timesteps, emb_dim]
+print(emb.shape)    # [batch_size, timesteps, emb_dim=128]
 print(emb)    
 print(codes.shape)
-print(codes)        # [batch_size, timesteps, codebook_dim]
+print(codes)        # [batch_size, timesteps, codebook_dim=8]
 
 # embs = encodec.decode_from_codebook_indices(codes)
 # print(emb.shape)
