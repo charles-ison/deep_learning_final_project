@@ -9,3 +9,6 @@
 
 # python cache
 .pyc
+
+# notebook checkpoints
+/.ipynb_checkpoints
