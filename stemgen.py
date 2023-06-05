@@ -15,5 +15,3 @@ Authors:
 
 This script serves as the main entry point for the Conditional Musical Accompaniment Generation system.
 """
-import torch
-
