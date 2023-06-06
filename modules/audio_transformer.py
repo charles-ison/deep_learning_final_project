@@ -23,7 +23,7 @@ class AudioTransformer(nn.Module):
             )
 
         # NOTE: Is this redundant?
-        # TODO: Investigate positional encodings. @Chase
+        # TODO: @Chase Investigate positional encodings.
         self.positional_encoding_layer = PositionalEncoder(
             d_model=dim_val,
             dropout=dropout
