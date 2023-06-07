@@ -21,6 +21,7 @@ import torch
 import torch.nn as nn
 
 from modules.audio_transformer import AudioTransformer
+from modules.audio_transformer_decoder import AudioTransformerDecoder
 from audiolm_pytorch.encodec import EncodecWrapper
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -80,14 +81,17 @@ num_layers = 4
 num_heads = 4
 dropout = 0.1
 
-# TODO: @chase Add and try decoder.
 # TODO: @chase see if pytorch.transformer handles autoregression.
 # TODO: @jc investigate masking.
 model = AudioTransformer(enc_vocab_size, dec_vocab_size, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
+#model = AudioTransformerDecoder(enc_vocab_size, dec_vocab_size, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
+
 # TODO: @jc investigate correct loss function. 
 # NOTE: Look in MusicLM paper.
 criterion = nn.MSELoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=0.1)
+
+# Decoder only requires substantially lower learning rate, not sure if it indicates a bug
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
 # Training loop (example)
 num_epochs = 10
