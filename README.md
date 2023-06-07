@@ -15,6 +15,27 @@ pip freeze > requirements.txt
 ```
 
 ## Files
+### data.py
+The data class called `TrackDataset` to load data, sample data, and get batch (todo).
+
+#### Attribute:
+
+- `train_dataset.track_list` will return
+
+    `[{'track': 'minibabyslakh/train/Track00001', 'bass': 'minibabyslakh/train/Track00001/bass/bass.wav', 'residuals': 'minibabyslakh/train/Track00001/bass/residuals.wav'}, ...]`
+
+- `train_dataset.data_list` will return
+
+    `[{'track': 'minibabyslakh/train/Track00001', 'bass_data': (tensor([[ ... ]]), 16000), 'residuals_data': (tensor([[ ... ]]), 16000)}, ...]`
+
+#### Method:
+
+- `_single_sample(self, index, window_size)` will return
+
+    `{'bass_data': (tensor([[ ... ]]), 16000), 'residuals_data': (tensor([[ ... ]]), 16000)}` the partil tensor from a random start point with length of `window_size`
+
+- `get_batch(self, batch_size, window_size)` still TODO
+
 ### slakh-utils
 For easier version control, the `slakh-utils` is a submodule from this [repo](https://github.com/shawn120/slakh-utils/tree/4118ea16222d11d295496845e898cd497c7b7673). To update this submodule:
 
