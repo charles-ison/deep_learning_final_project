@@ -23,6 +23,8 @@ import torch.nn as nn
 from modules.audio_transformer import AudioTransformer
 from audiolm_pytorch.encodec import EncodecWrapper
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 # TODO: @shawn Finish DataLoader "data.py"
 # NOTE: remember to check sample rate compatability.
 
@@ -30,15 +32,15 @@ from audiolm_pytorch.encodec import EncodecWrapper
 resample_rate = 24000
 # TODO: @chase Use real audio here.
 # TODO: @jc and chase Update to work with batch
-residual_audio = torch.randn(240000).cuda()
-tgt_audio = torch.randn(240000).cuda()
+residual_audio = torch.randn(240000).to(device)
+tgt_audio = torch.randn(240000).to(device)
 # stem_audio = residual_audio*3
 
 # models
 mert_processor = Wav2Vec2FeatureExtractor.from_pretrained("m-a-p/MERT-v1-95M",trust_remote_code=True)
 mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
 # TODO: @chase Confirm this works with example audio.
-encodec = EncodecWrapper().cuda()
+encodec = EncodecWrapper().to(device)
 
 # forward passes
 audio_features = mert_processor(residual_audio, sampling_rate=resample_rate, do_normalize=False, return_tensors="pt")
@@ -57,11 +59,11 @@ print("acoustic_tokens.shape", acoustic_tokens.shape)
 
 # NOTE: @jc fix after adding batched input.
 # NOTE: Could use embeddings instead of codes.
-tgt_tokens = codes.unsqueeze(dim=0).float().cuda()
+tgt_tokens = codes.unsqueeze(dim=0).float().to(device)
 print("tgt_tokens.shape:", tgt_tokens.shape)
 
 # Define the encoder and decoder inputs, and the decoder output
-encoder_input = torch.cat((acoustic_tokens, semantic_tokens), 2).cuda()
+encoder_input = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
 decoder_input = tgt_tokens[:, :-1]
 decoder_output = tgt_tokens[:, 1:]
 
@@ -81,7 +83,7 @@ dropout = 0.1
 # TODO: @chase Add and try decoder.
 # TODO: @chase see if pytorch.transformer handles autoregression.
 # TODO: @jc investigate masking.
-model = AudioTransformer(enc_vocab_size, dec_vocab_size, dim_model, hidden_dim, num_layers, num_heads, dropout).cuda()
+model = AudioTransformer(enc_vocab_size, dec_vocab_size, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
 # TODO: @jc investigate correct loss function. 
 # NOTE: Look in MusicLM paper.
 criterion = nn.MSELoss()
