@@ -16,25 +16,20 @@ pip freeze > requirements.txt
 
 ## Files
 ### data.py
-The data class called `TrackDataset` to load data, sample data, and get batch (todo).
+The data class called `TrackDataset` to initialize the dataset and sample data.
 
-#### Attribute:
+#### Attributes and Methods:
+- `train_dataset = TrackDataset(data_path)` to initialize the dataset.
 
-- `train_dataset.track_list` will return
+- `self.track_list` will return audio directory list:
 
     `[{'track': 'minibabyslakh/train/Track00001', 'bass': 'minibabyslakh/train/Track00001/bass/bass.wav', 'residuals': 'minibabyslakh/train/Track00001/bass/residuals.wav'}, ...]`
 
-- `train_dataset.data_list` will return
-
-    `[{'track': 'minibabyslakh/train/Track00001', 'bass_data': (tensor([[ ... ]]), 16000), 'residuals_data': (tensor([[ ... ]]), 16000)}, ...]`
-
-#### Method:
-
-- `_single_sample(self, index, window_size)` will return
-
-    `{'bass_data': (tensor([[ ... ]]), 16000), 'residuals_data': (tensor([[ ... ]]), 16000)}` the partil tensor from a random start point with length of `window_size`
-
-- `get_batch(self, batch_size, window_size)` still TODO
+- `window_size` is the length of the sample in seconds, default in 10 seconds
+  - use `self.set_window_size(window_size)` to change the window size if needed
+- `sample_rate` the **needed** sample rate of the audio, the data loader will automatically resample the audio to this sample rate, default is 24000
+  - use `self.set_sample_rate(sample_rate)` to change the sample rate if needed
+- `self.__getitem__` the magic method to customize dataloader, it will automaticly resample the audio and random sample the audio.
 
 ### slakh-utils
 For easier version control, the `slakh-utils` is a submodule from this [repo](https://github.com/shawn120/slakh-utils/tree/4118ea16222d11d295496845e898cd497c7b7673). To update this submodule:
