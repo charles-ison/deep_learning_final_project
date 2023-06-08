@@ -6,15 +6,20 @@ import torchaudio.transforms as T
 from torch.utils.data import Dataset
 import random
 
-# path setup
-whole_data_dir = 'minibabyslakh/'
-# print(os.listdir(data_dir))
-
 class TrackDataset(Dataset):
     def __init__(self, data_dir):
         self.data_dir = data_dir
         self.track_list = self._load_track_list()
-        self.data_list = self._load_data_list()
+        self.window_size = 10 # default window size is 10 seconds
+        self.sample_rate = 24000 # default sample rate is 24000
+
+        # self.data_list = self._load_data_list() # load all the data as initialize the dataset, turn this off for now since we have get_item function to do this
+
+    def set_window_size(self, window_size):
+        self.window_size = window_size
+
+    def set_sample_rate(self, sample_rate):
+        self.sample_rate = sample_rate
 
     def _load_track_list(self):
         track_list = []
@@ -47,6 +52,7 @@ class TrackDataset(Dataset):
                 track_list.append(track_info)
         return track_list
     
+    # not in use for now
     def _load_data_list(self):
         data_list = []
         # Load data into torch tensors form
@@ -73,44 +79,62 @@ class TrackDataset(Dataset):
         return len(self.track_list)
 
     def __getitem__(self, index):
-        # a easier API to get the torth_data, AKA in default: self[index] is as same as self.data_list[index]
-        return self.data_list[index]
+        track = self.track_list[index]
+        bass_file = track['bass']
+        residuals_file = track['residuals']
 
-    def _single_sample(self, index, window_size):
-        # takes in a duration and returns a random sample of the audio with that duration.
         def get_duration(wav_tensor, sample_rate):
             # the tuple_data should be in a pair of tuple(tensor, sample_rate)
             return wav_tensor.shape[1]/sample_rate
-        single_sample_pair = {}
-        for audio_type in "bass_data", "residuals_data":
-            wave_tnesor, sample_rate = self[index][audio_type]
-            audio_length = get_duration(wave_tnesor, sample_rate)
-            # print(audio_length)
 
-            if window_size > audio_length:
-                raise ValueError("window_size should be smaller than the audio length, the length of {} is {}".format(self[index]["track"], audio_length))
-            max_start_time = audio_length - window_size
-            start_time = random.uniform(0, max_start_time)
+        bass_wav_sr = torchaudio.load(bass_file)
+        residuals_wav_sr = torchaudio.load(residuals_file)
+        bass_length = get_duration(bass_wav_sr[0], bass_wav_sr[1])
+        residuals_length = get_duration(residuals_wav_sr[0], residuals_wav_sr[1])
+        if bass_length != residuals_length:
+            raise ValueError("The length of bass and residuals are not equal in track {}".format(track['track']))
+        else:
+            audio_length = bass_length
+        if self.window_size > audio_length:
+            raise ValueError("window_size should be smaller than the audio length, the length of {} is {}".format(track['track'], audio_length))
+        max_start_time = audio_length - self.window_size
+        start_time = random.uniform(0, max_start_time)
 
-            start_sample = int(start_time * sample_rate)
-            end_sampoe = start_sample + int(window_size * sample_rate)
+        items = []
+        for wav_sr in bass_wav_sr, residuals_wav_sr:
+            wav, sr = wav_sr
+            
+            if sr != self.sample_rate:
+                resampler = T.Resample(sr, self.sample_rate)
+                wav = resampler(wav)
+                sr = self.sample_rate
+
+            start_sample = int(start_time * sr)
+            end_sampoe = start_sample + int(self.window_size * sr)
             # Extract the desired window from the waveform
-            sampled_waveform = wave_tnesor[:, start_sample:end_sampoe]
-            # print(sampled_waveform.shape)
-            single_sample_pair[audio_type] = (sampled_waveform, sample_rate) # always return a tuple of (tensor, sample_rate), sample_rete for future use
+            sampled_waveform = wav[:, start_sample:end_sampoe]
+            items.append(sampled_waveform)
         
-        return single_sample_pair
-    
-    def get_batch(self, batch_size, window_size):
-        # return a batch of these random samples from function "_single_sample".
-        # batch_data = []
-        # for i in range(batch_size):
-        # TODO
-        return
+        return items[1], items[0]   # return residuals, bass
 
+# for methods test:
+def get_duration(wav_tensor, sample_rate):
+    return wav_tensor.shape[1]/sample_rate
+
+# methods validation
+# initialize the dataset
+whole_data_dir = 'minibabyslakh/'
 train_dataset = TrackDataset(os.path.join(whole_data_dir, 'train'))
-# print(train_dataset.track_list)
-# print(train_dataset.data_list)
-print(train_dataset._single_sample(0, 20))
-# print(train_dataset[0])
-# print(len(train_dataset))
+# track list (directory)
+print("track list: \n", train_dataset.track_list)
+# data size:
+print("data size: ", len(train_dataset))
+# How to set the window size and sample rate (These two parameters are already set by default, so no need to set them again if that's what you want)
+train_dataset.set_window_size(10)
+train_dataset.set_sample_rate(24000)
+# get a single sample
+print("single sample (residual tensor + bass tensor): \n", train_dataset[0])
+# check if the length matches the window size
+print("if the length matches the window size:")
+print("window size: ", train_dataset.window_size)
+print("length of the sample: ", get_duration(train_dataset[0][0], train_dataset.sample_rate))
