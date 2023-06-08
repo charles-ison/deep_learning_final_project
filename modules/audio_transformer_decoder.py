@@ -1,9 +1,9 @@
 import torch.nn as nn
-from modules.positional_encoder import PositionalEncoder
+from modules.positional_encoding import PositionalEncoding
 
 # transformer
 class AudioTransformerDecoder(nn.Module):
-    def __init__(self, src_input_size, tgt_input_size, dim_val, hidden_dim, num_layers, num_heads, dropout):
+    def __init__(self, src_input_size, tgt_input_size, max_len, dim_val, hidden_dim, num_layers, num_heads, dropout):
         super(AudioTransformerDecoder, self).__init__()
 
         self.src_fc = nn.Linear(
@@ -21,12 +21,7 @@ class AudioTransformerDecoder(nn.Module):
             out_features=tgt_input_size
         )
 
-        # NOTE: Is this redundant?
-        # TODO: @Chase Investigate positional encodings.
-        self.positional_encoding_layer = PositionalEncoder(
-            d_model=dim_val,
-            dropout=dropout
-        )
+        self.positional_encoding = PositionalEncoding(d_model=dim_val, dropout=dropout, max_len=max_len)
 
         transformer_decoder_layer = nn.TransformerDecoderLayer(d_model=dim_val, nhead=num_heads, dim_feedforward=hidden_dim,
                                                                dropout=dropout, batch_first=True, norm_first=True)
@@ -36,10 +31,10 @@ class AudioTransformerDecoder(nn.Module):
     def forward(self, src, tgt):
 
         src = self.src_fc(src)
-        src = self.positional_encoding_layer(src)
+        src = self.positional_encoding(src)
 
         tgt = self.tgt_fc(tgt)
-        tgt = self.positional_encoding_layer(tgt)
+        tgt = self.positional_encoding(tgt)
 
         transformer_output = self.transformer_decoder(src, tgt)
         output = self.fc_output(transformer_output)

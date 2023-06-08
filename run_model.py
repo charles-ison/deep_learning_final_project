@@ -80,18 +80,19 @@ dim_model = 512
 num_layers = 4
 num_heads = 4
 dropout = 0.1
+max_len = max(encoder_input.shape[1], decoder_input.shape[1])
 
 # TODO: @chase see if pytorch.transformer handles autoregression.
 # TODO: @jc investigate masking.
-model = AudioTransformer(enc_vocab_size, dec_vocab_size, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
-#model = AudioTransformerDecoder(enc_vocab_size, dec_vocab_size, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
+#model = AudioTransformer(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
+ model = AudioTransformerDecoder(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
 
 # TODO: @jc investigate correct loss function. 
 # NOTE: Look in MusicLM paper.
 criterion = nn.MSELoss()
 
 # Decoder only requires substantially lower learning rate, not sure if it indicates a bug
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.00001)
 
 # Training loop (example)
 num_epochs = 10
