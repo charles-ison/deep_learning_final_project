@@ -40,7 +40,6 @@ tgt_audio = torch.randn(240000).to(device)
 # models
 mert_processor = Wav2Vec2FeatureExtractor.from_pretrained("m-a-p/MERT-v1-95M",trust_remote_code=True)
 mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
-# TODO: @chase Confirm this works with example audio.
 encodec = EncodecWrapper().to(device)
 
 # forward passes
