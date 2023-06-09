@@ -111,7 +111,7 @@ class TrackDataset(Dataset):
             sampled_waveform = wav[:, start_sample:end_sampoe]
             items.append(sampled_waveform)
         
-        return items[1].squeeze(), items[0].squeeze()   # return residuals, bass
+        return items[1], items[0]   # return residuals, bass
 
 # a help function to get the audio duration of a wav tensor
 def get_duration(wav_tensor, sample_rate):
