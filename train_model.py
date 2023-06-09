@@ -24,7 +24,7 @@ num_heads = 4
 dropout = 0.1
 num_epochs = 10
 
-batch_size=2
+batch_size=5
 lr=0.00001
 # -----------------------------
 
@@ -72,9 +72,10 @@ for epoch in range(num_epochs):
     pbar = tq.tqdm(desc="Epoch {}".format(epoch+1), total=len(train_loader), unit="steps")
     for i, (residual_audio, tgt_audio) in enumerate(train_loader):
         # -------- get tokens ---------
+        # NEEDS FIXING
         # Ensure residual_audio and tgt_audio have batch dimension
-        residual_audio = residual_audio if residual_audio.dim() <= 2 else residual_audio.squeeze()
-        tgt_audio = tgt_audio if tgt_audio.dim() <= 2 else tgt_audio.squeeze()
+        residual_audio = residual_audio.unsqueeze(dim=0) if residual_audio.dim() == 2 else residual_audio.squeeze()
+        tgt_audio = tgt_audio.unsqueeze(dim=0) if tgt_audio.dim() == 2 else tgt_audio.squeeze()
 
         semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, resample_rate, device)
         # -----------------------------
