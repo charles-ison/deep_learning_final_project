@@ -1,66 +1,145 @@
+import os
 import torch
 import torchaudio
-from torch.utils.data import Dataset, DataLoader
-import os
+import torchaudio.functional as F
+import torchaudio.transforms as T
+from torch.utils.data import Dataset
+import random
 
-# TODO: @shawn finish TrackDataset class.
 class TrackDataset(Dataset):
-    """
-    @Shawn This class should do a couple things:
-
-    Create a list of track files.
-    Create a sample_track(window_size, idx) function which returns a random slice of a track
-        specifically sample_track should return residuals_files, bass_audio as lists.
-    Create a get_batch(batch_size, window_size) that gets a batch of samples.
-    """
     def __init__(self, data_dir):
         self.data_dir = data_dir
         self.track_list = self._load_track_list()
-        # load all the waves
-        # self.data = self._load_audio()
-        # self.sample_rate = 
+        self.window_size = 10 # default window size is 10 seconds
+        self.sample_rate = 24000 # default sample rate is 24000
+
+        # self.data_list = self._load_data_list() # load all the data as initialize the dataset, turn this off for now since we have get_item function to do this
+
+    def set_window_size(self, window_size):
+        self.window_size = window_size
+
+    def set_sample_rate(self, sample_rate):
+        self.sample_rate = sample_rate
 
     def _load_track_list(self):
         track_list = []
         # Load track information from the directory
-        # Assuming trackname, bass_audio, and residuals are the required keys in the data dictionary
+        # [{track: track path, bass_audio: [bass audio path], residuals: [redidual audio path]}, ...]
+        # Assuming track, bass_audio, and residuals are the required keys in the data dictionary
         for trackname in os.listdir(self.data_dir):
             track_path = os.path.join(self.data_dir, trackname)
             if os.path.isdir(track_path):
-                bass_audio_files = []
+                bass_files = []
                 residuals_files = []
-                
-                for filename in os.listdir(track_path):
+
+                audio_path = os.path.join(track_path, "bass")
+                for filename in os.listdir(audio_path):
                     if filename.endswith('.wav'):
-                        file_path = os.path.join(track_path, filename)
+                        file_path = os.path.join(audio_path, filename)
                         if 'bass' in filename:
-                            bass_audio_files.append(file_path)
+                            bass_files.append(file_path)
                         elif 'residuals' in filename:
                             residuals_files.append(file_path)
+                if len(bass_files) != len(residuals_files):
+                    raise ValueError("The number of bass and residuals files are not equal in track {}".format(track_path))
+                if len(bass_files) != 1 or len(residuals_files) != 1:
+                    raise ValueError("The number of bass and residuals files are not 1 in track {}, check the data structure".format(track_path))
                 track_info = {
-                    'trackname': trackname,
-                    'bass_audio': bass_audio_files,
-                    'residuals': residuals_files
+                    'track': track_path,
+                    'bass': bass_files[0],
+                    'residuals': residuals_files[0]
                 }
                 track_list.append(track_info)
         return track_list
+    
+    # not in use for now
+    def _load_data_list(self):
+        data_list = []
+        # Load data into torch tensors form
+        # [{track: track path, bass_data: tuple(tensor, sample_rate), residuals_data: tuple(tensor, sample_rate)}, ...]
+        for track_info in self.track_list:
+            # Load and process the audio files into tensors
+            bass_file = track_info['bass']
+            residuals_file = track_info['residuals']
+            
+            bass_wav_sr = torchaudio.load(bass_file)
+            residuals_wav_sr = torchaudio.load(residuals_file)
+
+            
+            data_item = {
+                'track': track_info['track'],
+                'bass_data': bass_wav_sr,
+                'residuals_data': residuals_wav_sr
+            }
+            data_list.append(data_item)
+            
+        return data_list
     
     def __len__(self):
         return len(self.track_list)
 
     def __getitem__(self, index):
-        track_info = self.track_list[index]
-        bass_audio_tensors = []
-        residuals_tensors = []
-        # Load and process the audio files into tensors
-        for bass_file, residuals_file in zip(track_info['bass_audio'], track_info['residuals']):
-            bass_audio, _ = torchaudio.load(bass_file)
-            residuals, _ = torchaudio.load(residuals_file)
-            bass_audio_tensors.append(bass_audio)
-            residuals_tensors.append(residuals)
+        track = self.track_list[index]
+        bass_file = track['bass']
+        residuals_file = track['residuals']
+
+        def get_duration(wav_tensor, sample_rate):
+            # the tuple_data should be in a pair of tuple(tensor, sample_rate)
+            return wav_tensor.shape[1]/sample_rate
+
+        bass_wav_sr = torchaudio.load(bass_file)
+        residuals_wav_sr = torchaudio.load(residuals_file)
+        bass_length = get_duration(bass_wav_sr[0], bass_wav_sr[1])
+        residuals_length = get_duration(residuals_wav_sr[0], residuals_wav_sr[1])
+        if bass_length != residuals_length:
+            raise ValueError("The length of bass and residuals are not equal in track {}".format(track['track']))
+        else:
+            audio_length = bass_length
+        if self.window_size > audio_length:
+            raise ValueError("window_size should be smaller than the audio length, the length of {} is {}".format(track['track'], audio_length))
+        max_start_time = audio_length - self.window_size
+        start_time = random.uniform(0, max_start_time)
+
+        items = []
+        for wav_sr in bass_wav_sr, residuals_wav_sr:
+            wav, sr = wav_sr
+            
+            if sr != self.sample_rate:
+                resampler = T.Resample(sr, self.sample_rate)
+                wav = resampler(wav)
+                sr = self.sample_rate
+
+            start_sample = int(start_time * sr)
+            end_sampoe = start_sample + int(self.window_size * sr)
+            # Extract the desired window from the waveform
+            sampled_waveform = wav[:, start_sample:end_sampoe]
+            items.append(sampled_waveform)
         
-        return {
-            'trackname': track_info['trackname'],
-            'bass_audio': bass_audio_tensors,
-            'residuals': residuals_tensors
-        }
+        return items[1], items[0]   # return residuals, bass
+
+# for methods test:
+def get_duration(wav_tensor, sample_rate):
+    return wav_tensor.shape[1]/sample_rate
+
+
+def main():
+    # methods validation
+    # initialize the dataset
+    whole_data_dir = 'data/mini/'
+    train_dataset = TrackDataset(os.path.join(whole_data_dir, 'train'))
+    # track list (directory)
+    print("track list: \n", train_dataset.track_list)
+    # data size:
+    print("data size: ", len(train_dataset))
+    # How to set the window size and sample rate (These two parameters are already set by default, so no need to set them again if that's what you want)
+    train_dataset.set_window_size(10)
+    train_dataset.set_sample_rate(24000)
+    # get a single sample
+    print("single sample (residual tensor + bass tensor): \n", train_dataset[0])
+    # check if the length matches the window size
+    print("if the length matches the window size:")
+    print("window size: ", train_dataset.window_size)
+    print("length of the sample: ", get_duration(train_dataset[0][0], train_dataset.sample_rate))
+
+if __name__=="__main__":
+    main()

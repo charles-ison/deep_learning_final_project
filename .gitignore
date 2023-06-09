@@ -13,3 +13,9 @@
 
 # notebook checkpoints
 /.ipynb_checkpoints
+
+# dataset stuff
+/data
+
+*.cpython
+*.pyc

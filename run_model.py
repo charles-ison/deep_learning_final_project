@@ -33,9 +33,12 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 resample_rate = 24000
 # TODO: @chase Use real audio here.
 # TODO: @jc and chase Update to work with batch
-residual_audio = torch.randn(240000).to(device)
-tgt_audio = torch.randn(240000).to(device)
+residual_audio = torch.randn(2, 240000)
+tgt_audio = torch.randn(2, 240000).to(device)
 # stem_audio = residual_audio*3
+
+# NOTE: mert_processor (Wav2Vec2FeatureExtractor) expects a batch to be a list of numpy arrays.
+list_residual_audio = [row for row in residual_audio.numpy()]
 
 # models
 mert_processor = Wav2Vec2FeatureExtractor.from_pretrained("m-a-p/MERT-v1-95M",trust_remote_code=True)
@@ -43,7 +46,7 @@ mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
 encodec = EncodecWrapper().to(device)
 
 # forward passes
-audio_features = mert_processor(residual_audio, sampling_rate=resample_rate, do_normalize=False, return_tensors="pt")
+audio_features = mert_processor(list_residual_audio, sampling_rate=resample_rate, do_normalize=False, return_tensors="pt")
 mert_outputs = mert(**audio_features, output_hidden_states=True)
 # TODO: @jc Check docs for start and end tokens.
 emb, codes, _ = encodec(tgt_audio, return_encoded = True)
@@ -59,7 +62,8 @@ print("acoustic_tokens.shape", acoustic_tokens.shape)
 
 # NOTE: @jc fix after adding batched input.
 # NOTE: Could use embeddings instead of codes.
-tgt_tokens = codes.unsqueeze(dim=0).float().to(device)
+# tgt_tokens = codes.unsqueeze(dim=0).float().to(device)
+tgt_tokens = codes.float().to(device)
 print("tgt_tokens.shape:", tgt_tokens.shape)
 
 # Define the encoder and decoder inputs, and the decoder output
