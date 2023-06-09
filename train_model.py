@@ -32,7 +32,7 @@ lr=0.00001
 # ---------- Dataset ----------
 train_data_dir = 'data/mini/train'
 train_dataset = TrackDataset(train_data_dir)
-train_dataset.set_window_size(10)
+train_dataset.set_window_size(5)
 train_dataset.set_sample_rate(24000)
 
 train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
@@ -41,6 +41,7 @@ print("INFO: Dataset loaded. Length:", len(train_dataset))
 
 # ---------- models ----------
 mert_processor = Wav2Vec2FeatureExtractor.from_pretrained("m-a-p/MERT-v1-95M",trust_remote_code=True)
+# TODO: Look into checnging sequence length.
 mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
 encodec = EncodecWrapper().to(device)
 print("INFO: Pretrained models loaded.")
@@ -76,8 +77,8 @@ for epoch in range(num_epochs):
         # -------- get tokens ---------
         # NEEDS FIXING
         # Ensure residual_audio and tgt_audio have batch dimension
-        residual_audio = residual_audio.unsqueeze(dim=0) if residual_audio.dim() == 2 else residual_audio.squeeze()
-        tgt_audio = tgt_audio.unsqueeze(dim=0) if tgt_audio.dim() == 2 else tgt_audio.squeeze()
+        residual_audio = residual_audio if residual_audio.dim() == 2 else residual_audio.squeeze()
+        tgt_audio = tgt_audio if tgt_audio.dim() == 2 else tgt_audio.squeeze()
 
         semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, resample_rate, device)
         # -----------------------------
