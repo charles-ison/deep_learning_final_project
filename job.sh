@@ -4,9 +4,9 @@
 #SBATCH -A cascades
 #SBATCH --job-name=stemgen
 #SBATCH -t 3-00:00:00
-#SBATCH -c 8
-#SBATCH --mem=128G
-#SBATCH --gres=gpu:2
+#SBATCH -c 4
+#SBATCH --mem=100G
+#SBATCH --gres=gpu:4
 #SBATCH --export=ALL
 
 #SBATCH -o logs/train_model.out

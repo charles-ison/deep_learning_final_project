@@ -1,0 +1,133 @@
+torch.cuda.is_available(): True
+INFO: Dataset loaded. Length: 151
+INFO: Pretrained models loaded.
+INFO: Model created: AudioTransformerDecoder(
+  (src_fc): Linear(in_features=1536, out_features=512, bias=True)
+  (tgt_fc): Linear(in_features=8, out_features=512, bias=True)
+  (fc_output): Linear(in_features=512, out_features=8, bias=True)
+  (positional_encoding): PositionalEncoding(
+    (dropout): Dropout(p=0.1, inplace=False)
+  )
+  (transformer_decoder): TransformerDecoder(
+    (layers): ModuleList(
+      (0-3): 4 x TransformerDecoderLayer(
+        (self_attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
+        )
+        (multihead_attn): MultiheadAttention(
+          (out_proj): NonDynamicallyQuantizableLinear(in_features=512, out_features=512, bias=True)
+        )
+        (linear1): Linear(in_features=512, out_features=256, bias=True)
+        (dropout): Dropout(p=0.1, inplace=False)
+        (linear2): Linear(in_features=256, out_features=512, bias=True)
+        (norm1): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (norm2): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (norm3): LayerNorm((512,), eps=1e-05, elementwise_affine=True)
+        (dropout1): Dropout(p=0.1, inplace=False)
+        (dropout2): Dropout(p=0.1, inplace=False)
+        (dropout3): Dropout(p=0.1, inplace=False)
+      )
+    )
+  )
+)
+Multiple GPUs available, using: 4
+Epoch 1/100, Loss: 158290.6250
+Epoch 2/100, Loss: 111870.5625
+Epoch 3/100, Loss: 113708.4219
+Epoch 4/100, Loss: 99881.6094
+Epoch 5/100, Loss: 95827.2266
+Epoch 6/100, Loss: 101534.5469
+Epoch 7/100, Loss: 91130.4062
+Epoch 8/100, Loss: 97004.8281
+Epoch 9/100, Loss: 100612.1797
+Epoch 10/100, Loss: 100591.5234
+Epoch 11/100, Loss: 73471.8672
+Epoch 12/100, Loss: 87421.1875
+Epoch 13/100, Loss: 98257.0312
+Epoch 14/100, Loss: 95884.1719
+Epoch 15/100, Loss: 63944.0820
+Epoch 16/100, Loss: 80423.7734
+Epoch 17/100, Loss: 78498.9453
+Epoch 18/100, Loss: 85646.0156
+Epoch 19/100, Loss: 98492.7422
+Epoch 20/100, Loss: 92108.6875
+Epoch 21/100, Loss: 98971.3359
+Epoch 22/100, Loss: 88553.5391
+Epoch 23/100, Loss: 76598.4531
+Epoch 24/100, Loss: 94813.4375
+Epoch 25/100, Loss: 84577.2109
+Epoch 26/100, Loss: 92026.9219
+Epoch 27/100, Loss: 94343.6094
+Epoch 28/100, Loss: 74676.6875
+Epoch 29/100, Loss: 83214.1797
+Epoch 30/100, Loss: 83365.4766
+Epoch 31/100, Loss: 94708.6094
+Epoch 32/100, Loss: 85291.9531
+Epoch 33/100, Loss: 67327.3906
+Epoch 34/100, Loss: 77177.6875
+Epoch 35/100, Loss: 92179.5078
+Epoch 36/100, Loss: 91735.7500
+Epoch 37/100, Loss: 83941.4609
+Epoch 38/100, Loss: 81192.1641
+Epoch 39/100, Loss: 94876.0156
+Epoch 40/100, Loss: 73843.7891
+Epoch 41/100, Loss: 84786.4219
+Epoch 42/100, Loss: 75219.3906
+Epoch 43/100, Loss: 81879.0781
+Epoch 44/100, Loss: 83044.1797
+Epoch 45/100, Loss: 92929.2344
+Epoch 46/100, Loss: 81426.0938
+Epoch 47/100, Loss: 83462.9219
+Epoch 48/100, Loss: 91855.6328
+Epoch 49/100, Loss: 90132.6172
+Epoch 50/100, Loss: 93608.1094
+Epoch 51/100, Loss: 66485.6641
+Epoch 52/100, Loss: 75562.6562
+Epoch 53/100, Loss: 85970.2891
+Epoch 54/100, Loss: 72105.7422
+Epoch 55/100, Loss: 83160.2812
+Epoch 56/100, Loss: 76290.2891
+Epoch 57/100, Loss: 95000.0859
+Epoch 58/100, Loss: 72109.1484
+Epoch 59/100, Loss: 75689.8906
+Epoch 60/100, Loss: 90712.7500
+Epoch 61/100, Loss: 73685.5391
+Epoch 62/100, Loss: 78999.8516
+Epoch 63/100, Loss: 86330.1094
+Epoch 64/100, Loss: 82592.4688
+Epoch 65/100, Loss: 80179.8438
+Epoch 66/100, Loss: 70108.2188
+Epoch 67/100, Loss: 71314.0938
+Epoch 68/100, Loss: 72325.7812
+Epoch 69/100, Loss: 89570.7578
+Epoch 70/100, Loss: 62675.8828
+Epoch 71/100, Loss: 71595.8516
+Epoch 72/100, Loss: 88746.1641
+Epoch 73/100, Loss: 78626.4453
+Epoch 74/100, Loss: 92413.4531
+Epoch 75/100, Loss: 83217.3359
+Epoch 76/100, Loss: 78081.8125
+Epoch 77/100, Loss: 76542.6484
+Epoch 78/100, Loss: 71589.0469
+Epoch 79/100, Loss: 86723.3906
+Epoch 80/100, Loss: 92155.2969
+Epoch 81/100, Loss: 86380.9922
+Epoch 82/100, Loss: 78318.6016
+Epoch 83/100, Loss: 91856.1094
+Epoch 84/100, Loss: 73575.1953
+Epoch 85/100, Loss: 83170.2266
+Epoch 86/100, Loss: 80698.8203
+Epoch 87/100, Loss: 87907.9453
+Epoch 88/100, Loss: 79836.1719
+Epoch 89/100, Loss: 82981.8438
+Epoch 90/100, Loss: 85872.2109
+Epoch 91/100, Loss: 92162.8125
+Epoch 92/100, Loss: 69594.5078
+Epoch 93/100, Loss: 87787.6094
+Epoch 94/100, Loss: 71358.4531
+Epoch 95/100, Loss: 71577.0391
+Epoch 96/100, Loss: 88229.9688
+Epoch 97/100, Loss: 76426.9141
+Epoch 98/100, Loss: 85706.6719
+Epoch 99/100, Loss: 85515.2969
+Epoch 100/100, Loss: 67862.3359

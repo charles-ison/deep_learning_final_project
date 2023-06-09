@@ -23,14 +23,14 @@ dim_model = 512
 num_layers = 4
 num_heads = 4
 dropout = 0.1
-num_epochs = 10
+num_epochs = 100 
 
-batch_size=5
-lr=0.00001
+batch_size=48
+lr=1e-5
 # -----------------------------
 
 # ---------- Dataset ----------
-train_data_dir = 'data/mini/train'
+train_data_dir = '/nfs/stak/users/zontosj/stemgen/slakh2100_wav_redux/test'
 train_dataset = TrackDataset(train_data_dir)
 train_dataset.set_window_size(5)
 train_dataset.set_sample_rate(24000)
@@ -74,14 +74,17 @@ optimizer = torch.optim.Adam(model.parameters(), lr)
 # TODO: @jc investigate correct loss function.
 criterion = nn.MSELoss()
 
+best_loss = None
+
 for epoch in range(num_epochs):
     pbar = tq.tqdm(desc="Epoch {}".format(epoch+1), total=len(train_loader), unit="steps")
     for i, (residual_audio, tgt_audio) in enumerate(train_loader):
         # -------- get tokens ---------
-        # NEEDS FIXING
-        # Ensure residual_audio and tgt_audio have batch dimension
+        # Ensure residual_audio and tgt_audio have batch dimension first
         residual_audio = residual_audio if residual_audio.dim() == 2 else residual_audio.squeeze()
         tgt_audio = tgt_audio if tgt_audio.dim() == 2 else tgt_audio.squeeze()
+        # residual_audio = residual_audio.view(-1, len(res))
+        # tgt_audio = tgt_audio.view(-1, len(tgt))
 
         semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, resample_rate, device)
         # -----------------------------
@@ -98,6 +101,10 @@ for epoch in range(num_epochs):
         pbar.update(1)
     pbar.close()
     print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.4f}")
+    if not best_loss or loss < best_loss:
+        torch.save(model, 'model.pt')
+        best_loss = loss
+
 
 # TODO: @jc save trained model weights
 # TODO: @jc add evaluate_mode.py for inference time
