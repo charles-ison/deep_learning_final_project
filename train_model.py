@@ -12,6 +12,7 @@ from audiolm_pytorch.encodec import EncodecWrapper
 from modules.data import TrackDataset
 from modules.tokens import get_tokens
 
+print("torch.cuda.is_available(): " + str(torch.cuda.is_available()))
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 resample_rate = 24000
@@ -57,16 +58,17 @@ enc_vocab_size = encoder_input.shape[-1]
 dec_vocab_size = decoder_input.shape[-1]
 max_len = max(encoder_input.shape[1], decoder_input.shape[1])
 
-
-
 # Instantiate the model
 # model = AudioTransformer(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
 model = AudioTransformerDecoder(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
 print("INFO: Model created:", model)
 
+if torch.cuda.device_count() > 1:
+    print("Multiple GPUs available, using: " + str(torch.cuda.device_count()))
+    model = nn.DataParallel(model)
+
 optimizer = torch.optim.Adam(model.parameters(), lr)
 criterion = nn.MSELoss()
-
 
 for epoch in range(num_epochs):
     pbar = tq.tqdm(desc="Epoch {}".format(epoch+1), total=len(train_loader), unit="steps")
