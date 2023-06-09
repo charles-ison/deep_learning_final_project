@@ -83,10 +83,6 @@ class TrackDataset(Dataset):
         bass_file = track['bass']
         residuals_file = track['residuals']
 
-        def get_duration(wav_tensor, sample_rate):
-            # the tuple_data should be in a pair of tuple(tensor, sample_rate)
-            return wav_tensor.shape[1]/sample_rate
-
         bass_wav_sr = torchaudio.load(bass_file)
         residuals_wav_sr = torchaudio.load(residuals_file)
         bass_length = get_duration(bass_wav_sr[0], bass_wav_sr[1])
@@ -115,10 +111,12 @@ class TrackDataset(Dataset):
             sampled_waveform = wav[:, start_sample:end_sampoe]
             items.append(sampled_waveform)
         
-        return items[1], items[0]   # return residuals, bass
+        return items[1].squeeze(), items[0].squeeze()   # return residuals, bass
 
-# for methods test:
+# a help function to get the audio duration of a wav tensor
 def get_duration(wav_tensor, sample_rate):
+    if wav_tensor.dim() == 1:
+        return wav_tensor.shape[0]/sample_rate
     return wav_tensor.shape[1]/sample_rate
 
 
@@ -136,10 +134,18 @@ def main():
     train_dataset.set_sample_rate(24000)
     # get a single sample
     print("single sample (residual tensor + bass tensor): \n", train_dataset[0])
+    print("the shape of residuals is: ", train_dataset[0][0].shape)
+    print("the shape of bass is: ", train_dataset[0][1].shape)
     # check if the length matches the window size
     print("if the length matches the window size:")
     print("window size: ", train_dataset.window_size)
     print("length of the sample: ", get_duration(train_dataset[0][0], train_dataset.sample_rate))
-
+    from torch.utils.data import DataLoader
+    train_loader = DataLoader(train_dataset, 5, shuffle=True)
+    for batch in train_loader:
+        print(batch)
+        print(batch[0].shape)
+        print(batch[1].shape)
+        
 if __name__=="__main__":
     main()

@@ -60,6 +60,7 @@ dec_vocab_size = decoder_input.shape[-1]
 max_len = max(encoder_input.shape[1], decoder_input.shape[1])
 
 # Instantiate the model
+# TODO: @Chase investigate masking.
 # model = AudioTransformer(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
 model = AudioTransformerDecoder(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
 print("INFO: Model created:", model)
@@ -69,6 +70,8 @@ if torch.cuda.device_count() > 1:
     model = nn.DataParallel(model)
 
 optimizer = torch.optim.Adam(model.parameters(), lr)
+
+# TODO: @jc investigate correct loss function.
 criterion = nn.MSELoss()
 
 for epoch in range(num_epochs):
@@ -95,3 +98,6 @@ for epoch in range(num_epochs):
         pbar.update(1)
     pbar.close()
     print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.4f}")
+
+# TODO: @jc save trained model weights
+# TODO: @jc add evaluate_mode.py for inference time
