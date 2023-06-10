@@ -30,7 +30,7 @@ lr=1e-5
 # -----------------------------
 
 # ---------- Dataset ----------
-train_data_dir = '/nfs/stak/users/zontosj/stemgen/slakh2100_wav_redux/test'
+train_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/test'
 train_dataset = TrackDataset(train_data_dir)
 train_dataset.set_window_size(5)
 train_dataset.set_sample_rate(24000)
