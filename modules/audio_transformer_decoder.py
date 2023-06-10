@@ -1,14 +1,13 @@
 import torch.nn as nn
 from modules.positional_encoding import PositionalEncoding
 
-# transformer
 class AudioTransformerDecoder(nn.Module):
-    def __init__(self, src_input_size, tgt_input_size, max_len, dim_val, hidden_dim, num_layers, num_heads, dropout):
+    def __init__(self, mem_input_size, tgt_input_size, max_len, dim_val, hidden_dim, num_layers, num_heads, dropout):
         super(AudioTransformerDecoder, self).__init__()
 
-        self.src_fc = nn.Linear(
-            in_features=src_input_size,
-            out_features=dim_val 
+        self.mem_fc = nn.Linear(
+            in_features=mem_input_size,
+            out_features=dim_val
         )
 
         self.tgt_fc = nn.Linear(
@@ -28,15 +27,17 @@ class AudioTransformerDecoder(nn.Module):
 
         self.transformer_decoder = nn.TransformerDecoder(transformer_decoder_layer, num_layers=num_layers)
 
-    def forward(self, src, tgt):
-
-        src = self.src_fc(src)
-        src = self.positional_encoding(src)
+    def forward(self, mem, tgt):
 
         tgt = self.tgt_fc(tgt)
         tgt = self.positional_encoding(tgt)
 
-        transformer_output = self.transformer_decoder(src, tgt)
+        mem = self.mem_fc(mem)
+        mem = self.positional_encoding(mem)
+
+        # TODO: At inference time this flat needs to be removed
+        # Note, the decoder switches the order these need to be passed from the encoder-decoder
+        transformer_output = self.transformer_decoder(tgt, mem, tgt_is_causal=True)
         output = self.fc_output(transformer_output)
 
         return output

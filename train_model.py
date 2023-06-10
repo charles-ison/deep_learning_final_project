@@ -30,7 +30,7 @@ lr=1e-5
 # -----------------------------
 
 # ---------- Dataset ----------
-train_data_dir = '/nfs/stak/users/zontosj/stemgen/slakh2100_wav_redux/test'
+train_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/test'
 train_dataset = TrackDataset(train_data_dir)
 train_dataset.set_window_size(5)
 train_dataset.set_sample_rate(resample_rate)
@@ -61,7 +61,6 @@ dec_vocab_size = decoder_input.shape[-1]
 max_len = max(encoder_input.shape[1], decoder_input.shape[1])
 
 # Instantiate the model
-# TODO: @Chase investigate masking.
 # model = AudioTransformer(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
 model = AudioTransformerDecoder(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
 print("INFO: Model created:", model)
