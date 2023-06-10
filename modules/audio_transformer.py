@@ -1,7 +1,6 @@
 import torch.nn as nn
 from modules.positional_encoding import PositionalEncoding
 
-# transformer
 class AudioTransformer(nn.Module):
     def __init__(self, encoder_input_size, decoder_input_size, max_len, dim_val, hidden_dim, num_layers, num_heads, dropout):
         super(AudioTransformer, self).__init__()
