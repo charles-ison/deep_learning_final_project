@@ -23,7 +23,7 @@ dim_model = 512
 num_layers = 4
 num_heads = 4
 dropout = 0.1
-num_epochs = 100 
+num_epochs = 1
 
 batch_size=48
 lr=1e-5
@@ -49,6 +49,7 @@ print("INFO: Pretrained models loaded.")
 # -----------------------------
 
 # get sizes
+# TODO: @jc Add to trainer class? or make tokenizer class.
 res, tgt = train_dataset[0]
 semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(res, tgt, mert_processor, mert, encodec, resample_rate, device)
 
@@ -71,7 +72,7 @@ if torch.cuda.device_count() > 1:
 
 optimizer = torch.optim.Adam(model.parameters(), lr)
 
-# TODO: @jc investigate correct loss function.
+# TODO: @jc investigate correct loss function. (try CrossEntropyLoss and prediction codebook logits)
 criterion = nn.MSELoss()
 
 best_loss = None
@@ -83,8 +84,6 @@ for epoch in range(num_epochs):
         # Ensure residual_audio and tgt_audio have batch dimension first
         residual_audio = residual_audio if residual_audio.dim() == 2 else residual_audio.squeeze()
         tgt_audio = tgt_audio if tgt_audio.dim() == 2 else tgt_audio.squeeze()
-        # residual_audio = residual_audio.view(-1, len(res))
-        # tgt_audio = tgt_audio.view(-1, len(tgt))
 
         semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, resample_rate, device)
         # -----------------------------
@@ -102,9 +101,6 @@ for epoch in range(num_epochs):
     pbar.close()
     print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.4f}")
     if not best_loss or loss < best_loss:
-        torch.save(model, 'model.pt')
+        # NOTE: look at alternative model saving strat
+        torch.save(model, model.__class__.__name__ + "_saved_model.pt")
         best_loss = loss
-
-
-# TODO: @jc save trained model weights
-# TODO: @jc add evaluate_mode.py for inference time
