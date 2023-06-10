@@ -22,3 +22,9 @@
 *.pyc
 
 *.idea
+
+# models
+*.pt
+
+# wavs
+*.wav
