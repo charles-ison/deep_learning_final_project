@@ -35,6 +35,7 @@ class AudioTransformerDecoder(nn.Module):
         mem = self.mem_fc(mem)
         mem = self.positional_encoding(mem)
 
+        # TODO: At inference time this flat needs to be removed
         # Note, the decoder switches the order these need to be passed from the encoder-decoder
         transformer_output = self.transformer_decoder(tgt, mem, tgt_is_causal=True)
         output = self.fc_output(transformer_output)

@@ -32,6 +32,7 @@ class AudioTransformer(nn.Module):
         tgt = self.decoder_input_layer(tgt)
         tgt = self.positional_encoding(tgt)
 
+        #TODO: Add tgt mask at training time and then operate 1 token at a time at inference time
         transformer_output = self.transformer(src, tgt)
         output = self.linear_mapping(transformer_output)
 
