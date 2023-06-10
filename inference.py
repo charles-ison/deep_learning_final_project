@@ -2,6 +2,7 @@ from transformers import Wav2Vec2FeatureExtractor
 from transformers import AutoModel
 import torch
 import torch.nn as nn
+import torchaudio
 from torch.utils.data import DataLoader
 
 import tqdm as tq
@@ -30,7 +31,7 @@ lr=1e-5
 # -----------------------------
 
 # ---------- Dataset ----------
-train_data_dir = '/nfs/stak/users/zontosj/stemgen/slakh2100_wav_redux/test'
+train_data_dir = '/nfs/stak/users/zontosj/stemgen/slakh2100_wav_redux/validation'
 train_dataset = TrackDataset(train_data_dir)
 train_dataset.set_window_size(5)
 train_dataset.set_sample_rate(resample_rate)
@@ -50,62 +51,56 @@ print("INFO: Pretrained models loaded.")
 
 # get sizes
 res, tgt = train_dataset[0]
-semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(res, tgt, mert_processor, mert, encodec, resample_rate, device)
+semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(res, res, mert_processor, mert, encodec, resample_rate, device)
 
 encoder_input = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
 decoder_input = tgt_tokens[:, :-1]
 decoder_output = tgt_tokens[:, 1:]
 
+
 enc_vocab_size = encoder_input.shape[-1]
 dec_vocab_size = decoder_input.shape[-1]
 max_len = max(encoder_input.shape[1], decoder_input.shape[1])
 
+num_time_steps = tgt_tokens.shape[1]
+
 # Instantiate the model
 # TODO: @Chase investigate masking.
+saved_model_path = "jcmain/deep_learning_final_project/model.pt"
 # model = AudioTransformer(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
 model = AudioTransformerDecoder(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
-print("INFO: Model created:", model)
+model.eval()
+# print("INFO: Model created:", model)
 
-if torch.cuda.device_count() > 1:
-    print("Multiple GPUs available, using: " + str(torch.cuda.device_count()))
-    model = nn.DataParallel(model)
-
-optimizer = torch.optim.Adam(model.parameters(), lr)
-
-# TODO: @jc investigate correct loss function.
-criterion = nn.MSELoss()
-
-best_loss = None
-
-for epoch in range(num_epochs):
-    pbar = tq.tqdm(desc="Epoch {}".format(epoch+1), total=len(train_loader), unit="steps")
-    for i, (residual_audio, tgt_audio) in enumerate(train_loader):
-        # -------- get tokens ---------
-        # Ensure residual_audio and tgt_audio have batch dimension first
-        residual_audio = residual_audio if residual_audio.dim() == 2 else residual_audio.squeeze()
-        tgt_audio = tgt_audio if tgt_audio.dim() == 2 else tgt_audio.squeeze()
-        # residual_audio = residual_audio.view(-1, len(res))
-        # tgt_audio = tgt_audio.view(-1, len(tgt))
-
-        semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, resample_rate, device)
-        # -----------------------------
-        encoder_input = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
-        decoder_input = tgt_tokens[:, :-1]
-        decoder_output = tgt_tokens[:, 1:]
-
-        optimizer.zero_grad()
-        predicted_codes = model(encoder_input, decoder_input)
-        loss = criterion(predicted_codes, decoder_output)
-        loss.backward(retain_graph=True)
-        optimizer.step()
-
-        pbar.update(1)
-    pbar.close()
-    print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.4f}")
-    if not best_loss or loss < best_loss:
-        torch.save(model, 'model.pt')
-        best_loss = loss
+# Initialize the decoder input with zeros
+# encoder_input = encoder_input
+start_token = decoder_input[:, 0:1, :]
+# decoder_input = torch.zeros(1, 1, dec_vocab_size).cuda()
 
 
-# TODO: @jc save trained model weights
-# TODO: @jc add evaluate_mode.py for inference time
+print("encoder_input.shape", encoder_input.shape)
+print("start_token.shape", start_token.shape)
+
+# Perform inference
+with torch.no_grad():
+    predicted_codes = []
+    # for _ in range(num_time_steps):
+    output = model(encoder_input, start_token)
+    predicted_codes = torch.cat((start_token, output), dim=1)
+
+    # Update the decoder input with the current output
+    predicted_codes = output
+
+# Print the predicted codes
+print("predicted_codes.shape", predicted_codes.shape)
+print("predicted_codes", predicted_codes)
+encodec = EncodecWrapper().to(device)
+src_encodec_tokens = encodec(res, return_encoded = False)
+src_encodec_tokens = src_encodec_tokens[1]
+# audio = encodec.decode_from_codebook_indices(predicted_codes[0].unsqueeze(dim=0).long())
+audio = encodec.decode_from_codebook_indices(src_encodec_tokens)
+print(audio.shape)
+audio = audio.view(1, -1).t().cpu()
+torchaudio.save("test.wav", audio, resample_rate)
+
+# sox test.wav -n spectrogram
