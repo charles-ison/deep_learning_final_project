@@ -7,11 +7,11 @@ To avoid version control issues, use the following commands to load the python e
 module load python/3.10 cuda/11.7
 python3 -m venv env
 source env/bin/activate
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 If you add pakages please run before committing:
 ```bash
-pip freeze > requirements.txt
+pip3 freeze > requirements.txt
 ```
 
 ## Files

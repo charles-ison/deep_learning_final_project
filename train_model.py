@@ -28,23 +28,24 @@ dim_model = 512
 num_layers = 4
 num_heads = 4
 dropout = 0.1
-num_epochs = 100 
+num_epochs = 1
 
 batch_size=48
 lr=1e-5
 # -----------------------------
 
 # ---------- Dataset ----------
-train_data_dir = '/nfs/stak/users/zontosj/stemgen/slakh2100_wav_redux/test'
+train_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/test'
 train_dataset = TrackDataset(train_data_dir)
 train_dataset.set_window_size(5)
-train_dataset.set_sample_rate(24000)
+train_dataset.set_sample_rate(resample_rate)
 
 train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
 print("INFO: Dataset loaded. Length:", len(train_dataset))
 # -----------------------------
 
 # ---------- models ----------
+# TODO: Put these models on multiple gpus?
 mert_processor = Wav2Vec2FeatureExtractor.from_pretrained("m-a-p/MERT-v1-95M",trust_remote_code=True)
 # TODO: Look into checnging sequence length.
 mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
@@ -53,6 +54,7 @@ print("INFO: Pretrained models loaded.")
 # -----------------------------
 
 # get sizes
+# TODO: @jc Add to trainer class? or make tokenizer class.
 res, tgt = train_dataset[0]
 semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(res, tgt, mert_processor, mert, encodec, resample_rate, device)
 
@@ -65,7 +67,6 @@ dec_vocab_size = decoder_input.shape[-1]
 max_len = max(encoder_input.shape[1], decoder_input.shape[1])
 
 # Instantiate the model
-# TODO: @Chase investigate masking.
 # model = AudioTransformer(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
 model = AudioTransformerDecoder(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
 print("INFO: Model created:", model)
@@ -76,7 +77,7 @@ if torch.cuda.device_count() > 1:
 
 optimizer = torch.optim.Adam(model.parameters(), lr)
 
-# TODO: @jc investigate correct loss function.
+# TODO: @jc investigate correct loss function. (try CrossEntropyLoss and prediction codebook logits)
 criterion = nn.MSELoss()
 
 best_loss = None
@@ -88,8 +89,6 @@ for epoch in range(num_epochs):
         # Ensure residual_audio and tgt_audio have batch dimension first
         residual_audio = residual_audio if residual_audio.dim() == 2 else residual_audio.squeeze()
         tgt_audio = tgt_audio if tgt_audio.dim() == 2 else tgt_audio.squeeze()
-        # residual_audio = residual_audio.view(-1, len(res))
-        # tgt_audio = tgt_audio.view(-1, len(tgt))
 
         semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, resample_rate, device)
         # -----------------------------
@@ -109,9 +108,6 @@ for epoch in range(num_epochs):
     pbar.close()
     print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.4f}")
     if not best_loss or loss < best_loss:
-        torch.save(model, 'model.pt')
+        # NOTE: look at alternative model saving strat
+        torch.save(model, model.__class__.__name__ + "_saved_model.pt")
         best_loss = loss
-
-
-# TODO: @jc save trained model weights
-# TODO: @jc add evaluate_mode.py for inference time

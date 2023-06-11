@@ -1,7 +1,6 @@
 import torch.nn as nn
 from modules.positional_encoding import PositionalEncoding
 
-# transformer
 class AudioTransformer(nn.Module):
     def __init__(self, encoder_input_size, decoder_input_size, max_len, dim_val, hidden_dim, num_layers, num_heads, dropout):
         super(AudioTransformer, self).__init__()
@@ -33,6 +32,7 @@ class AudioTransformer(nn.Module):
         tgt = self.decoder_input_layer(tgt)
         tgt = self.positional_encoding(tgt)
 
+        #TODO: Add tgt mask at training time and then operate 1 token at a time at inference time
         transformer_output = self.transformer(src, tgt)
         output = self.linear_mapping(transformer_output)
 

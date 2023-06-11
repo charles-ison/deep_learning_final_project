@@ -21,8 +21,16 @@
 *.cpython
 *.pyc
 
-# credentials
-/credentials
+*.idea
+
+# models
+*.pt
+
+# wavs
+*.wav
 
 # neptune
 /.neptune
+
+# credentials
+/credentials
