@@ -66,7 +66,7 @@ dec_vocab_size = tgt.shape[-1]
 max_len = max(src.shape[1], tgt.shape[1])
 
 # Instantiate the model
-# model = AudioTransformer(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
+#model = AudioTransformer(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
 model = AudioTransformerDecoder(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
 print("INFO: Model created:", model)
 
@@ -98,7 +98,7 @@ for epoch in range(num_epochs):
         decoder_output = tgt_tokens[:, 1:]
 
         optimizer.zero_grad()
-        predicted_codes = model(src, tgt, tgt_mask=tgt_mask)
+        predicted_codes = model(src, tgt)
         loss = criterion(predicted_codes, decoder_output)
         if NEPTUNE_SWITCH == 1:
             runtime['train/loss'].log(loss)
