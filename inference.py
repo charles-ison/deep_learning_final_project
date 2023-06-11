@@ -59,45 +59,29 @@ if torch.cuda.device_count() > 1:
 # -----------------------------
 
 # get example
-res, _ = train_dataset[0]
-semantic_tokens, acoustic_tokens, res_enc = get_tokens(res, res, mert_processor, mert, encodec, resample_rate, device)
+res, tgt = train_dataset[0]
+semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(res, tgt, mert_processor, mert, encodec, resample_rate, device)
 
-encoder_input = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
-decoder_input = res_enc[:, :-1]
-decoder_output = res_enc[:, 1:]
+src = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
+print("src.shape:", src.shape)
+print("tgt_tokens.shape:", tgt_tokens.shape)
 
-enc_vocab_size = encoder_input.shape[-1]
-dec_vocab_size = decoder_input.shape[-1]
-max_len = max(encoder_input.shape[1], decoder_input.shape[1])
-
-num_time_steps = encoder_input.shape[1]
-
-
-
-# Initialize the decoder input with zeros
-encoder_input = encoder_input
-start_token = decoder_input[:, 0:1, :]
-decoder_input = torch.zeros(1, 1, dec_vocab_size).cuda()
-
-
-print("encoder_input.shape", encoder_input.shape)
-print("start_token.shape", start_token.shape)
+seq_length = src.shape[1]
+vocab_size = tgt_tokens.shape[-1]
+tgt = torch.zeros(1, seq_length, vocab_size).cuda()
 
 # Perform inference
-with torch.no_grad():
-    predicted_codes = []
-    # for _ in range(num_time_steps):
-    # output = model(encoder_input, start_token)
-    # predicted_codes = torch.cat((start_token, output), dim=1)
+for _ in range(seq_length):
+    tgt = model(src, tgt)
 
-    # Update the decoder input with the current output
-    # predicted_codes = output
+output = tgt
 
-# Print the predicted codes
-# print("predicted_codes.shape", predicted_codes.shape)
-# print("predicted_codes", predicted_codes)
+print("output:", output)
+print("output.shape:", output.shape)
+print("tgt_tokens:", tgt_tokens)
+print("tgt_tokens.shape:", tgt_tokens.shape)
 
-
-# decoded_audio = encodec.decode_from_codebook_indices(codes)
+# Uncomment after prediction codes
+# decoded_audio = encodec.decode_from_codebook_indices(output)
 # print("decoded_audio.shape:", decoded_audio.shape)
 # write("decoded_audio.wav", resample_rate, decoded_audio.detach().numpy())

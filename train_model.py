@@ -53,13 +53,13 @@ print("INFO: Pretrained models loaded.")
 res, tgt = train_dataset[0]
 semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(res, tgt, mert_processor, mert, encodec, resample_rate, device)
 
-encoder_input = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
-decoder_input = tgt_tokens[:, :-1]
+src = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
+tgt = tgt_tokens[:, :-1]
 decoder_output = tgt_tokens[:, 1:]
 
-enc_vocab_size = encoder_input.shape[-1]
-dec_vocab_size = decoder_input.shape[-1]
-max_len = max(encoder_input.shape[1], decoder_input.shape[1])
+enc_vocab_size = src.shape[-1]
+dec_vocab_size = tgt.shape[-1]
+max_len = max(src.shape[1], tgt.shape[1])
 
 # Instantiate the model
 # model = AudioTransformer(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
@@ -87,12 +87,12 @@ for epoch in range(num_epochs):
 
         semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, resample_rate, device)
         # -----------------------------
-        encoder_input = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
-        decoder_input = tgt_tokens[:, :-1]
+        src = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
+        tgt = tgt_tokens[:, :-1]
         decoder_output = tgt_tokens[:, 1:]
 
         optimizer.zero_grad()
-        predicted_codes = model(encoder_input, decoder_input)
+        predicted_codes = model(src, tgt)
         loss = criterion(predicted_codes, decoder_output)
         loss.backward(retain_graph=True)
         optimizer.step()
