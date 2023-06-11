@@ -66,8 +66,8 @@ dec_vocab_size = tgt.shape[-1]
 max_len = max(src.shape[1], tgt.shape[1])
 
 # Instantiate the model
-#model = AudioTransformer(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
-model = AudioTransformerDecoder(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
+model = AudioTransformer(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
+#model = AudioTransformerDecoder(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
 print("INFO: Model created:", model)
 
 if torch.cuda.device_count() > 1:
@@ -81,6 +81,8 @@ criterion = nn.MSELoss()
 
 best_loss = None
 tgt_mask = nn.Transformer.generate_square_subsequent_mask(max_len, device=device)
+tgt_mask = tgt_mask.unsqueeze(dim=0)
+tgt_mask = tgt_mask.repeat(num_heads * batch_size, 1, 1)
 print("tgt_mask.shape:", tgt_mask.shape)
 
 for epoch in range(num_epochs):
@@ -98,7 +100,7 @@ for epoch in range(num_epochs):
         decoder_output = tgt_tokens[:, 1:]
 
         optimizer.zero_grad()
-        predicted_codes = model(src, tgt)
+        predicted_codes = model(src, tgt, tgt_mask=tgt_mask)
         loss = criterion(predicted_codes, decoder_output)
         if NEPTUNE_SWITCH == 1:
             runtime['train/loss'].log(loss)
