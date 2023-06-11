@@ -12,15 +12,14 @@ from audiolm_pytorch.encodec import EncodecWrapper
 from modules.data import TrackDataset
 from modules.tokens import get_tokens
 
-print("torch.cuda.is_available(): " + str(torch.cuda.is_available()))
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-NEPTUNE_SWITCH = 1
 # ---------- neptune ----------
+NEPTUNE_SWITCH = 0
 if NEPTUNE_SWITCH == 1:
     from neptune_init import runtime
+# -----------------------------
 
-resample_rate = 24000
+print("torch.cuda.is_available(): " + str(torch.cuda.is_available()))
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # ---------- params ----------
 hidden_dim = 256
@@ -29,7 +28,7 @@ num_layers = 4
 num_heads = 4
 dropout = 0.1
 num_epochs = 1
-
+resample_rate = 24000
 batch_size=48
 lr=1e-5
 # -----------------------------
@@ -46,7 +45,7 @@ print("INFO: Dataset loaded. Length:", len(train_dataset))
 
 # ---------- models ----------
 # TODO: Put these models on multiple gpus?
-mert_processor = Wav2Vec2FeatureExtractor.from_pretrained("m-a-p/MERT-v1-95M",trust_remote_code=True)
+mert_processor = Wav2Vec2FeatureExtractor.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
 # TODO: Look into checnging sequence length.
 mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
 encodec = EncodecWrapper().to(device)
@@ -81,6 +80,8 @@ optimizer = torch.optim.Adam(model.parameters(), lr)
 criterion = nn.MSELoss()
 
 best_loss = None
+tgt_mask = nn.Transformer.generate_square_subsequent_mask(max_len, device=device)
+print("tgt_mask.shape:", tgt_mask.shape)
 
 for epoch in range(num_epochs):
     pbar = tq.tqdm(desc="Epoch {}".format(epoch+1), total=len(train_loader), unit="steps")
@@ -97,7 +98,7 @@ for epoch in range(num_epochs):
         decoder_output = tgt_tokens[:, 1:]
 
         optimizer.zero_grad()
-        predicted_codes = model(src, tgt)
+        predicted_codes = model(src, tgt, tgt_mask=tgt_mask)
         loss = criterion(predicted_codes, decoder_output)
         if NEPTUNE_SWITCH == 1:
             runtime['train/loss'].log(loss)

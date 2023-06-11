@@ -26,14 +26,13 @@ class AudioTransformer(nn.Module):
                                           num_decoder_layers=num_layers, dim_feedforward=hidden_dim,
                                           dropout=dropout, batch_first=True, norm_first=True)
 
-    def forward(self, src, tgt):
+    def forward(self, src, tgt, tgt_mask=None):
         src = self.encoder_input_layer(src)
         src = self.positional_encoding(src)
         tgt = self.decoder_input_layer(tgt)
         tgt = self.positional_encoding(tgt)
 
-        #TODO: Add tgt mask at training time and then operate 1 token at a time at inference time
-        transformer_output = self.transformer(src, tgt)
+        transformer_output = self.transformer(src, tgt, tgt_mask)
         output = self.linear_mapping(transformer_output)
 
         return output

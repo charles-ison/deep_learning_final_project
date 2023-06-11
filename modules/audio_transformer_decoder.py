@@ -27,15 +27,15 @@ class AudioTransformerDecoder(nn.Module):
 
         self.transformer_decoder = nn.TransformerDecoder(transformer_decoder_layer, num_layers=num_layers)
 
-    def forward(self, mem, tgt):
+    def forward(self, mem, tgt, tgt_mask=None):
         tgt = self.tgt_fc(tgt)
         tgt = self.positional_encoding(tgt)
 
         mem = self.mem_fc(mem)
         mem = self.positional_encoding(mem)
-        # TODO: At inference time this flat needs to be removed. "tgt_is_causal=True" error
-        # Note, the decoder switches the order these need to be passed from the encoder-decoder
-        transformer_output = self.transformer_decoder(tgt, mem)
+
+        # Note, the decoder switches the order these need to be passed from the vanilla transformer (encoder and decoder)
+        transformer_output = self.transformer_decoder(tgt, mem, tgt_mask)
         output = self.fc_output(transformer_output)
 
         return output
