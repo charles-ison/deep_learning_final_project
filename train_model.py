@@ -15,6 +15,11 @@ from modules.tokens import get_tokens
 print("torch.cuda.is_available(): " + str(torch.cuda.is_available()))
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+NEPTUNE_SWITCH = 1
+# ---------- neptune ----------
+if NEPTUNE_SWITCH == 1:
+    from neptune_init import runtime
+
 resample_rate = 24000
 
 # ---------- params ----------
@@ -95,6 +100,8 @@ for epoch in range(num_epochs):
         optimizer.zero_grad()
         predicted_codes = model(encoder_input, decoder_input)
         loss = criterion(predicted_codes, decoder_output)
+        if NEPTUNE_SWITCH == 1:
+            runtime['train/loss'].log(loss)
         loss.backward(retain_graph=True)
         optimizer.step()
 

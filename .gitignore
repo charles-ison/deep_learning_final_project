@@ -20,3 +20,9 @@
 
 *.cpython
 *.pyc
+
+# credentials
+/credentials
+
+# neptune
+/.neptune
