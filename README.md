@@ -1,6 +1,10 @@
 # Conditional Musical Accompaniment Generation
 AI 535 Deep Learning Final Project
 
+## HPC
+Example sun command
+```srun -p cascades -A cascades --gres=gpu:2 --mem=100G --pty bash```
+
 ## Enviroment
 To avoid version control issues, use the following commands to load the python enviroment for this project:
 ```bash
