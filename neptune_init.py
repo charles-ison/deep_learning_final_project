@@ -1,6 +1,6 @@
 import configparser
 import neptune
-from neptune.integrations.pytorch import NeptuneLogger
+# from neptune.integrations.pytorch import NeptuneLogger
 
 # print("Neptune imported.")
 def _process_api_key(f_key: str) -> configparser.ConfigParser:
