@@ -28,3 +28,9 @@
 
 # wavs
 *.wav
+
+# neptune
+/.neptune
+
+# credentials
+/credentials
