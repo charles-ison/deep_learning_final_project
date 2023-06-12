@@ -26,7 +26,7 @@ num_heads = 4
 dropout = 0.1
 num_epochs = 100 
 
-batch_size=48
+batch_size=5
 lr=1e-5
 # -----------------------------
 
@@ -59,8 +59,10 @@ if torch.cuda.device_count() > 1:
 # -----------------------------
 
 # get example
-res, tgt = train_dataset[0]
-semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(res, tgt, mert_processor, mert, encodec, resample_rate, device)
+residual_audio, target_audio = next(iter(train_loader))
+print("residual_audio.shape", residual_audio.shape)
+print("target_audio.shape", target_audio.shape)
+semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, target_audio, mert_processor, mert, encodec, resample_rate, device)
 
 src = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
 print("src.shape:", src.shape)

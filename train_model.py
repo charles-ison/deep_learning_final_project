@@ -55,6 +55,7 @@ print("INFO: Pretrained models loaded.")
 # get sizes
 # TODO: @jc Add to trainer class? or make tokenizer class.
 res, tgt = train_dataset[0]
+res, tgt = res.unsqueeze(0), tgt.unsqueeze(0)
 semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(res, tgt, mert_processor, mert, encodec, resample_rate, device)
 
 src = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
@@ -77,7 +78,7 @@ if torch.cuda.device_count() > 1:
 optimizer = torch.optim.Adam(model.parameters(), lr)
 
 # TODO: @jc investigate correct loss function. (try CrossEntropyLoss and prediction codebook logits)
-criterion = nn.MSELoss()
+criterion = nn.NLLLoss()
 
 best_loss = None
 tgt_mask = nn.Transformer.generate_square_subsequent_mask(max_len + 1, device=device)
@@ -89,18 +90,15 @@ for epoch in range(num_epochs):
     pbar = tq.tqdm(desc="Epoch {}".format(epoch+1), total=len(train_loader), unit="steps")
     for i, (residual_audio, tgt_audio) in enumerate(train_loader):
         # -------- get tokens ---------
-        # Ensure residual_audio and tgt_audio have batch dimension first
-        residual_audio = residual_audio if residual_audio.dim() == 2 else residual_audio.squeeze()
-        tgt_audio = tgt_audio if tgt_audio.dim() == 2 else tgt_audio.squeeze()
-
         semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, resample_rate, device)
         # -----------------------------
         src = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
-        tgt = tgt_tokens[:, :-1]
-        tgt_tokens = tgt_tokens[:, 1:]
+        tgt = tgt_tokens[:, :-1]            # [B, timesteps-1, num_quantizers=8]
+        tgt_tokens = tgt_tokens[:, 1:]      # [B, timesteps-1, num_quantizers=8]
 
         optimizer.zero_grad()
-        predicted_codes = model(src, tgt, tgt_mask=tgt_mask)
+        # NOTE: removed mask for testing put back later.
+        predicted_codes = model(src, tgt, tgt_mask=None)
 
         loss = criterion(predicted_codes, tgt_tokens)
         if NEPTUNE_SWITCH == 1:
