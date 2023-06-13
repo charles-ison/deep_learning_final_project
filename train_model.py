@@ -81,8 +81,7 @@ optimizer = torch.optim.Adam(model.parameters(), lr)
 criterion = nn.CrossEntropyLoss()
 
 best_loss = None
-# add back max_len + 1 when start token is fixed.
-tgt_mask = nn.Transformer.generate_square_subsequent_mask(max_len, device=device)
+tgt_mask = nn.Transformer.generate_square_subsequent_mask(max_len+1, device=device)
 tgt_mask = tgt_mask.unsqueeze(dim=0)
 tgt_mask = tgt_mask.repeat(num_heads * batch_size, 1, 1)
 print("tgt_mask.shape:", tgt_mask.shape)
@@ -93,12 +92,12 @@ for epoch in range(num_epochs):
         # -------- get tokens ---------
         semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, resample_rate, device)
         mem = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
-        tgt = tgt_tokens[:, :-1]            # [B, timesteps-1, num_quantizers=8]
-        gt_tgt = tgt_tokens[:, 1:]          # [B, timesteps-1, num_quantizers=8]
+        # trimming extra encodec sample to match Mert.
+        tgt = tgt_tokens[:, :-1]            # [B, timesteps, num_quantizers=8]
 
         optimizer.zero_grad()
         predicted_codes = model(mem, tgt, tgt_mask=tgt_mask)  # [B, L, Q, V]
-        loss = criterion(predicted_codes.permute(0, 3, 1, 2), gt_tgt)
+        loss = criterion(predicted_codes.permute(0, 3, 1, 2), tgt_tokens)
         if NEPTUNE_SWITCH == 1:
             runtime['train/loss'].log(loss)
         loss.backward(retain_graph=True)

@@ -17,7 +17,7 @@ class AudioTransformerDecoder(nn.Module):
         
         self.mem_fc = nn.Linear(mem_input_size, dim_model)
 
-        self.pe = PositionalEncoding(d_model=dim_model, dropout=dropout, max_len=max_len)
+        self.pe = PositionalEncoding(d_model=dim_model, dropout=dropout, max_len=max_len+1)
 
         transformer_decoder_layer = nn.TransformerDecoderLayer(d_model=dim_model, nhead=num_heads, dim_feedforward=hidden_dim,
                                                                dropout=dropout, batch_first=True, norm_first=True)
@@ -30,21 +30,19 @@ class AudioTransformerDecoder(nn.Module):
 
 
     def forward(self, mem, tgt, tgt_mask=None):
-        # start_tokens = self.start_token.repeat(tgt.shape[0], 1, 1)
-        # mem = torch.cat((start_tokens, mem), dim = 1)
-        # tgt = torch.cat((start_tokens, tgt), dim = 1)
-
         mem, tgt = self.mem_fc(mem), self.tgt_embedding(tgt)
         tgt = torch.flatten(tgt, start_dim=2)
+
+        start_tokens = self.start_token.repeat(tgt.shape[0], 1, 1)
+        mem = torch.cat((start_tokens, mem), dim = 1)
+        tgt = torch.cat((start_tokens, tgt), dim = 1)
+
         mem, tgt = self.pe(mem), self.pe(tgt)     
         
         transformer_output = self.transformer_decoder(tgt, mem, tgt_mask)
-        output = self.fc_output(transformer_output)
+        logits = self.fc_output(transformer_output)
 
         # unflatten out
-        output = torch.unflatten(output, -1, (self.num_q, self.tgt_voc_size))
+        logits = torch.unflatten(logits, -1, (self.num_q, self.tgt_voc_size))
 
-        # Removing end token
-        output = output[:, 0:self.max_len, :]
-
-        return output
+        return logits
