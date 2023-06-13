@@ -3,8 +3,8 @@ from transformers import AutoModel
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-
 import tqdm as tq
+import json
 
 from modules.audio_transformer import AudioTransformer
 from modules.audio_transformer_decoder import AudioTransformerDecoder
@@ -13,7 +13,7 @@ from modules.data import TrackDataset
 from modules.tokens import get_tokens
 
 # ---------- neptune ----------
-NEPTUNE_SWITCH = 1
+NEPTUNE_SWITCH = 0
 if NEPTUNE_SWITCH == 1:
     from neptune_init import runtime
     from neptune.utils import stringify_unsupported
@@ -23,46 +23,34 @@ print("torch.cuda.is_available(): " + str(torch.cuda.is_available()))
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # ---------- params ----------
-params = {
-    "hidden_dim": 256,
-    "dim_model": 512,
-    "embedding_dim": 10,
-    "num_layers": 4,
-    "num_heads": 4,
-    "dropout": 0.1,
-    "num_epochs": 10,
-    "resample_rate": 24000,
-    "batch_size": 4,            # must be divisable by num_gpu
-    "lr": 1e-3
-}
+with open('model_config.json') as json_file:
+    params = json.load(json_file)
 
 if NEPTUNE_SWITCH:
     runtime["params"] = stringify_unsupported(params)
 
 hidden_dim = params["hidden_dim"]
-dim_model = params["dim_model"]
 embedding_dim = params["embedding_dim"]
 num_layers = params["num_layers"]
 num_heads = params["num_heads"]
 dropout = params["dropout"]
 num_epochs = params["num_epochs"]
-resample_rate = params["resample_rate"]
+sample_rate = params["sample_rate"]
 batch_size = params["batch_size"]
 lr = params["lr"]
 # -----------------------------
 
 # ---------- Dataset ----------
-# NOTE: developing on babyset need to change for training.
 train_data_dir = '/nfs/hpc/share/stemgen/babyslakh_16k'
 train_dataset = TrackDataset(train_data_dir)
 train_dataset.set_window_size(5)
-train_dataset.set_sample_rate(resample_rate)
+train_dataset.set_sample_rate(sample_rate)
 
 train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
 print("INFO: Dataset loaded. Length:", len(train_dataset))
 # -----------------------------
 
-# ---------- models ----------
+# ---------- Models ----------
 # TODO: Put these models on multiple gpus?
 mert_processor = Wav2Vec2FeatureExtractor.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
 # TODO: Look into checnging sequence length.
@@ -77,7 +65,7 @@ print("INFO: Encodec and Mert models loaded.")
 # TODO: @jc Add to trainer class? or make tokenizer class.
 res, tgt = train_dataset[0]
 res, tgt = res.unsqueeze(0), tgt.unsqueeze(0)
-semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(res, tgt, mert_processor, mert, encodec, resample_rate, device)
+semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(res, tgt, mert_processor, mert, encodec, sample_rate, device)
 
 src = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
 tgt = tgt_tokens[:, :-1]
@@ -100,20 +88,21 @@ criterion = nn.CrossEntropyLoss()
 best_loss = None
 tgt_mask = nn.Transformer.generate_square_subsequent_mask(max_len+1, device=device)
 tgt_mask = tgt_mask.unsqueeze(dim=0)
-tgt_mask = tgt_mask.repeat(num_heads * batch_size, 1, 1)
-print("tgt_mask.shape:", tgt_mask.shape)
 
 for epoch in range(num_epochs):
     pbar = tq.tqdm(desc="Epoch {}".format(epoch+1), total=len(train_loader), unit="steps")
     for i, (residual_audio, tgt_audio) in enumerate(train_loader):
-        # -------- get tokens ---------
-        semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, resample_rate, device)
+        # Fix for last batch in epoch
+        true_batch_size = tgt_audio.shape[0]
+        batch_tgt_mask = tgt_mask.repeat(num_heads * true_batch_size, 1, 1)
+        # get tokens
+        semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, sample_rate, device)
         mem = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
         # trimming extra encodec sample to match Mert.
         tgt = tgt_tokens[:, :-1]            # [B, timesteps, num_quantizers=8]
 
         optimizer.zero_grad()
-        predicted_codes = model(mem, tgt, tgt_mask=tgt_mask)  # [B, L, Q, V]
+        predicted_codes = model(mem, tgt, tgt_mask=batch_tgt_mask)  # [B, L, Q, V]
         loss = criterion(predicted_codes.permute(0, 3, 1, 2), tgt_tokens)
         if NEPTUNE_SWITCH == 1:
             runtime['train/loss'].log(loss)
@@ -126,4 +115,6 @@ for epoch in range(num_epochs):
     if not best_loss or loss < best_loss:
         # NOTE: look at alternative model saving strat
         torch.save(model, "model.pt")
+        torch.save(model.state_dict(), "model.pth")
         best_loss = loss
+

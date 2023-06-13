@@ -1,6 +1,6 @@
 import torch
 from scipy.io.wavfile import write
-from modules.data import TrackDataset
+from data import TrackDataset
 from torch.utils.data import DataLoader
 
 from audiolm_pytorch.encodec import EncodecWrapper
@@ -25,6 +25,6 @@ print("res.shape:", res.shape)  # [batch_size, len(audio)]
 print("codes.shape:", codes.shape)
 # print("codes:", codes)        # [batch_size, timesteps, codebook_dim=8]
 
-decoded = encodec.decode_from_codebook_indices(codes)
+decoded = encodec.decode_from_codebook_indices(codes.unsqueeze(0))
 print(decoded.shape)
 write("test.wav", resample_rate, decoded.detach().numpy())

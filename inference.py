@@ -1,11 +1,9 @@
 from transformers import Wav2Vec2FeatureExtractor
 from transformers import AutoModel
 import torch
+import torchaudio
 import torch.nn as nn
-from torch.utils.data import DataLoader
-from scipy.io.wavfile import write
-
-import tqdm as tq
+import json
 
 from modules.audio_transformer import AudioTransformer
 from modules.audio_transformer_decoder import AudioTransformerDecoder
@@ -16,28 +14,29 @@ from modules.tokens import get_tokens
 print("torch.cuda.is_available(): " + str(torch.cuda.is_available()))
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-resample_rate = 24000
+sample_rate = 24000
 
 # ---------- params ----------
-hidden_dim = 256
-dim_model = 512
-num_layers = 4
-num_heads = 4
-dropout = 0.1
-num_epochs = 100 
+with open('model_config.json') as json_file:
+    params = json.load(json_file)
 
-batch_size=5
-lr=1e-5
+hidden_dim = params["hidden_dim"]
+embedding_dim = params["embedding_dim"]
+num_layers = params["num_layers"]
+num_heads = params["num_heads"]
+dropout = params["dropout"]
+num_epochs = params["num_epochs"]
+sample_rate = params["sample_rate"]
+batch_size = 1
+lr = params["lr"]
 # -----------------------------
 
 # ---------- Dataset ----------
-train_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/validation'
-train_dataset = TrackDataset(train_data_dir)
-train_dataset.set_window_size(5)
-train_dataset.set_sample_rate(resample_rate)
-
-train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
-print("INFO: Dataset loaded. Length:", len(train_dataset))
+test_data_dir = '/nfs/hpc/share/stemgen/babyslakh_16k'
+test_dataset = TrackDataset(test_data_dir)
+test_dataset.set_window_size(5)
+test_dataset.set_sample_rate(sample_rate)
+print("INFO: Dataset loaded. Length:", len(test_dataset))
 # -----------------------------
 
 # ---------- models ----------
@@ -45,45 +44,61 @@ mert_processor = Wav2Vec2FeatureExtractor.from_pretrained("m-a-p/MERT-v1-95M",tr
 # TODO: Look into changing encoding length.
 mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
 encodec = EncodecWrapper().to(device)
+codebook_size = 1024
+num_q = encodec.num_quantizers
 print("INFO: Pretrained models loaded.")
+# -----------------------------
 
-# NOTE: change filename
-saved_model_filename = "DataParallel_saved_model.pt"
-model = torch.load(saved_model_filename)
+# get example
+sample_idx = 0
+residual_audio, target_audio = test_dataset[sample_idx]
+residual_audio = residual_audio.reshape(1, -1)
+target_audio = target_audio.reshape(1, -1)
+
+# tokens
+semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, target_audio, mert_processor, mert, encodec, sample_rate, device)
+mem = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
+_, max_len, mem_emb_dim = mem.shape
+print("mem.shape:", mem.shape)
+
+# load model
+# model = AudioTransformerDecoder(mem_emb_dim, codebook_size, max_len, embedding_dim, num_q, hidden_dim, num_layers, num_heads, dropout).to(device)
+# state_dict = torch.load("model.pth")
+# model.load_state_dict(state_dict)
+model = torch.load("model.pt")
 model.eval()
-print("INFO: Model created:", model)
+print("INFO: Model created.")
 
 if torch.cuda.device_count() > 1:
     print("Multiple GPUs available, using: " + str(torch.cuda.device_count()))
     model = nn.DataParallel(model)
-# -----------------------------
 
-# get example
-residual_audio, target_audio = next(iter(train_loader))
-print("residual_audio.shape", residual_audio.shape)
-print("target_audio.shape", target_audio.shape)
-semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, target_audio, mert_processor, mert, encodec, resample_rate, device)
+torchaudio.save(f"residual_audio_{sample_idx}.wav", residual_audio, sample_rate)
+print(f"INFO: residual_audio_{sample_idx}.wav saved.")
+torchaudio.save(f"target_audio_{sample_idx}.wav", target_audio, sample_rate)
+print(f"INFO: target_audio_{sample_idx}.wav saved.")
 
-src = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
-print("src.shape:", src.shape)
-print("tgt_tokens.shape:", tgt_tokens.shape)
-
-seq_length = src.shape[1]
-vocab_size = tgt_tokens.shape[-1]
-tgt = torch.zeros(1, seq_length, vocab_size).cuda()
+seq_length = mem.shape[1]
 
 # Perform inference
-for _ in range(seq_length):
-    tgt = model(src, tgt)
+with torch.no_grad():
+    pred = torch.zeros(1, seq_length, num_q).long()
 
-output = tgt
+    # Generate sequence
+    for i in range(seq_length):
+        # Decode the next token
+        decoder_output = model(mem, pred)
 
-print("output:", output)
-print("output.shape:", output.shape)
-print("tgt_tokens:", tgt_tokens)
-print("tgt_tokens.shape:", tgt_tokens.shape)
+        # Get the most probable token
+        next_token = torch.argmax(decoder_output, dim=-1)[:, i]
+        
+        # insert the token to the prediction
+        pred[:, i] = next_token
 
-# Uncomment after prediction codes
-# decoded_audio = encodec.decode_from_codebook_indices(output)
-# print("decoded_audio.shape:", decoded_audio.shape)
-# write("decoded_audio.wav", resample_rate, decoded_audio.detach().numpy())
+print("pred.shape:", pred.shape)
+pred_wav = encodec.decode_from_codebook_indices(pred.to(device))
+pred_wav = pred_wav.reshape(1, -1).detach().cpu()
+print("pred_wav.shape:", pred_wav.shape)
+
+torchaudio.save(f"output_{sample_idx}.wav", pred_wav, sample_rate)
+print(f"INFO: output_{sample_idx}.wav saved.")

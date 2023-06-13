@@ -30,7 +30,6 @@ class AudioTransformerDecoder(nn.Module):
     def forward(self, mem, tgt, tgt_mask=None):
         mem, tgt = self.mem_fc(mem), self.tgt_embedding(tgt)
         tgt = torch.flatten(tgt, start_dim=2)
-
         start_tokens = self.start_token.repeat(tgt.shape[0], 1, 1)
         mem = torch.cat((start_tokens, mem), dim = 1)
         tgt = torch.cat((start_tokens, tgt), dim = 1)

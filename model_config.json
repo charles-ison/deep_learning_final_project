@@ -1,0 +1,11 @@
+{
+    "hidden_dim": 256,
+    "embedding_dim": 8,
+    "num_layers": 4,
+    "num_heads": 4,
+    "dropout": 0.1,
+    "num_epochs": 5,
+    "sample_rate": 24000,
+    "batch_size": 8,
+    "lr": 3e-3
+}
