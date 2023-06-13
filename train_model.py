@@ -13,7 +13,7 @@ from modules.data import TrackDataset
 from modules.tokens import get_tokens
 
 # ---------- neptune ----------
-NEPTUNE_SWITCH = 0
+NEPTUNE_SWITCH = 1
 if NEPTUNE_SWITCH == 1:
     from neptune_init import runtime
     from neptune.utils import stringify_unsupported
@@ -41,7 +41,7 @@ lr = params["lr"]
 # -----------------------------
 
 # ---------- Dataset ----------
-train_data_dir = '/nfs/hpc/share/stemgen/babyslakh_16k'
+train_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/test'
 train_dataset = TrackDataset(train_data_dir)
 train_dataset.set_window_size(5)
 train_dataset.set_sample_rate(sample_rate)

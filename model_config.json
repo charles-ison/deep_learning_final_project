@@ -4,8 +4,8 @@
     "num_layers": 4,
     "num_heads": 4,
     "dropout": 0.1,
-    "num_epochs": 5,
+    "num_epochs": 100,
     "sample_rate": 24000,
-    "batch_size": 8,
+    "batch_size": 32,
     "lr": 3e-3
 }
