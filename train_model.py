@@ -28,7 +28,7 @@ embedding_dim = 10
 num_layers = 4
 num_heads = 4
 dropout = 0.1
-num_epochs = 1
+num_epochs = 10
 resample_rate = 24000
 batch_size=4            # must be divisable by num_gpu
 lr=1e-5
@@ -53,7 +53,7 @@ mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
 encodec = EncodecWrapper().to(device)
 codebook_size = 1024
 num_q = encodec.num_quantizers
-print("INFO: Pretrained models loaded.")
+print("INFO: Encodec and Mert models loaded.")
 # -----------------------------
 
 # get sizes
@@ -64,7 +64,6 @@ semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(res, tgt, mert_process
 
 src = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
 tgt = tgt_tokens[:, :-1]
-# decoder_output = tgt_tokens[:, 1:]
 
 src_emb_dim = src.shape[-1]
 max_len = max(src.shape[1], tgt.shape[1])
@@ -98,11 +97,8 @@ for epoch in range(num_epochs):
         gt_tgt = tgt_tokens[:, 1:]          # [B, timesteps-1, num_quantizers=8]
 
         optimizer.zero_grad()
-        # NOTE: removed mask for testing put back later.
-        print("input mem.shape:", mem.shape)
-        print("input tgt.shape:", tgt.shape)
-        predicted_codes = model(mem, tgt, tgt_mask=tgt_mask)  # should be [B, L, Q, V]
-        loss = criterion(predicted_codes, gt_tgt)
+        predicted_codes = model(mem, tgt, tgt_mask=tgt_mask)  # [B, L, Q, V]
+        loss = criterion(predicted_codes.permute(0, 3, 1, 2), gt_tgt)
         if NEPTUNE_SWITCH == 1:
             runtime['train/loss'].log(loss)
         loss.backward(retain_graph=True)

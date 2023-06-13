@@ -26,7 +26,7 @@ class AudioTransformerDecoder(nn.Module):
 
         self.fc_output = nn.Linear(in_features=dim_model, out_features=tgt_voc_size * num_q)
 
-        self.log_softmax = nn.LogSoftmax(dim=-1)
+        # self.log_softmax = nn.LogSoftmax(dim=-1)
 
 
     def forward(self, mem, tgt, tgt_mask=None):
@@ -34,19 +34,9 @@ class AudioTransformerDecoder(nn.Module):
         # mem = torch.cat((start_tokens, mem), dim = 1)
         # tgt = torch.cat((start_tokens, tgt), dim = 1)
 
-        # mem.shape == [Batchsize, samples, mem_input_size]
-        # tgt.shape == [Batchsize, samples, num_q]
-
-        mem, tgt = self.mem_fc(mem), self.tgt_embedding(tgt.int())
-        print("mem.shape:", mem.shape)
-        print("tgt.shape:", tgt.shape)
-            # mem = [Batchsize, samples, dim_model]
-            # tgt = [Batchsize, samples, num_q, embedding_dim]
+        mem, tgt = self.mem_fc(mem), self.tgt_embedding(tgt)
         tgt = torch.flatten(tgt, start_dim=2)
-        print("tgt.shape:", tgt.shape)
-            # tgt = [Batchsize, samples, dim_model]
-        mem, tgt = self.pe(mem), self.pe(tgt)
-            # tgt = [Batchsize, samples, dim_model]        
+        mem, tgt = self.pe(mem), self.pe(tgt)     
         
         transformer_output = self.transformer_decoder(tgt, mem, tgt_mask)
         output = self.fc_output(transformer_output)
@@ -57,4 +47,4 @@ class AudioTransformerDecoder(nn.Module):
         # Removing end token
         output = output[:, 0:self.max_len, :]
 
-        return self.log_softmax(output)
+        return output

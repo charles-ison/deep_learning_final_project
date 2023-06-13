@@ -14,6 +14,6 @@ def get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, resampl
     semantic_tokens = all_layer_hidden_states[7] # picking layer 7 for now
     acoustic_tokens = all_layer_hidden_states[-1]
 
-    tgt_tokens = codes.float().to(device)
+    tgt_tokens = codes.long().to(device)
 
     return semantic_tokens, acoustic_tokens, tgt_tokens
