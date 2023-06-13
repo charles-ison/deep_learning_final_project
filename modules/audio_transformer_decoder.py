@@ -26,8 +26,6 @@ class AudioTransformerDecoder(nn.Module):
 
         self.fc_output = nn.Linear(in_features=dim_model, out_features=tgt_voc_size * num_q)
 
-        # self.log_softmax = nn.LogSoftmax(dim=-1)
-
 
     def forward(self, mem, tgt, tgt_mask=None):
         mem, tgt = self.mem_fc(mem), self.tgt_embedding(tgt)

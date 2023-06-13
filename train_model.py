@@ -13,25 +13,42 @@ from modules.data import TrackDataset
 from modules.tokens import get_tokens
 
 # ---------- neptune ----------
-NEPTUNE_SWITCH = 0
+NEPTUNE_SWITCH = 1
 if NEPTUNE_SWITCH == 1:
     from neptune_init import runtime
+    from neptune.utils import stringify_unsupported
 # -----------------------------
 
 print("torch.cuda.is_available(): " + str(torch.cuda.is_available()))
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # ---------- params ----------
-hidden_dim = 256
-dim_model = 512
-embedding_dim = 10
-num_layers = 4
-num_heads = 4
-dropout = 0.1
-num_epochs = 10
-resample_rate = 24000
-batch_size=4            # must be divisable by num_gpu
-lr=1e-5
+params = {
+    "hidden_dim": 256,
+    "dim_model": 512,
+    "embedding_dim": 10,
+    "num_layers": 4,
+    "num_heads": 4,
+    "dropout": 0.1,
+    "num_epochs": 10,
+    "resample_rate": 24000,
+    "batch_size": 4,            # must be divisable by num_gpu
+    "lr": 1e-3
+}
+
+if NEPTUNE_SWITCH:
+    runtime["params"] = stringify_unsupported(params)
+
+hidden_dim = params["hidden_dim"]
+dim_model = params["dim_model"]
+embedding_dim = params["embedding_dim"]
+num_layers = params["num_layers"]
+num_heads = params["num_heads"]
+dropout = params["dropout"]
+num_epochs = params["num_epochs"]
+resample_rate = params["resample_rate"]
+batch_size = params["batch_size"]
+lr = params["lr"]
 # -----------------------------
 
 # ---------- Dataset ----------
