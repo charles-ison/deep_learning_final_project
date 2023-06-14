@@ -25,6 +25,7 @@
 
 # models
 *.pt
+*.pth
 
 # wavs
 *.wav

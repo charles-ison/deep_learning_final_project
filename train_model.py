@@ -86,15 +86,11 @@ optimizer = torch.optim.Adam(model.parameters(), lr)
 criterion = nn.CrossEntropyLoss()
 
 best_loss = None
-tgt_mask = nn.Transformer.generate_square_subsequent_mask(max_len+1, device=device)
-tgt_mask = tgt_mask.unsqueeze(dim=0)
+tgt_mask = nn.Transformer.generate_square_subsequent_mask(max_len+1, device=device).unsqueeze(dim=0)
 
 for epoch in range(num_epochs):
     pbar = tq.tqdm(desc="Epoch {}".format(epoch+1), total=len(train_loader), unit="steps")
     for i, (residual_audio, tgt_audio) in enumerate(train_loader):
-        # Fix for last batch in epoch
-        true_batch_size = tgt_audio.shape[0]
-        batch_tgt_mask = tgt_mask.repeat(num_heads * true_batch_size, 1, 1)
         # get tokens
         semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, sample_rate, device)
         mem = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
@@ -102,11 +98,11 @@ for epoch in range(num_epochs):
         tgt = tgt_tokens[:, :-1]            # [B, timesteps, num_quantizers=8]
 
         optimizer.zero_grad()
-        predicted_codes = model(mem, tgt, tgt_mask=batch_tgt_mask)  # [B, L, Q, V]
+        predicted_codes = model(mem, tgt, tgt_mask=tgt_mask)  # [B, L, Q, V]
         loss = criterion(predicted_codes.permute(0, 3, 1, 2), tgt_tokens)
         if NEPTUNE_SWITCH == 1:
             runtime['train/loss'].log(loss)
-        loss.backward(retain_graph=True)
+        loss.backward()
         optimizer.step()
 
         pbar.update(1)
@@ -114,6 +110,7 @@ for epoch in range(num_epochs):
     print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.4f}")
     if not best_loss or loss < best_loss:
         # NOTE: look at alternative model saving strat
+        print("Best loss achieved, saving model.")
         torch.save(model, "model.pt")
         torch.save(model.state_dict(), "model.pth")
         best_loss = loss
