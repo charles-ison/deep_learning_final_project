@@ -113,5 +113,7 @@ for epoch in range(num_epochs):
         print("Best loss achieved, saving model.")
         torch.save(model, "model.pt")
         torch.save(model.state_dict(), "model.pth")
+        if NEPTUNE_SWITCH == 1:
+            runtime["model"].upload("model.pt")
         best_loss = loss
 
