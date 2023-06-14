@@ -1,11 +1,11 @@
 {
-    "hidden_dim": 128,
-    "embedding_dim": 8,
-    "num_layers": 12,
+    "hidden_dim": 4096,
+    "embedding_dim": 128,
+    "num_layers": 24,
     "num_heads": 16,
     "dropout": 0.1,
-    "num_epochs": 10,
+    "num_epochs": 30,
     "sample_rate": 24000,
-    "batch_size": 1,
-    "lr": 1e-3
+    "batch_size": 3,
+    "lr": 1e-5
 }
