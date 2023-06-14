@@ -62,8 +62,6 @@ _, max_len, mem_emb_dim = mem.shape
 print("mem.shape:", mem.shape)
 
 # load model
-# state_dict = torch.load("model.pth")
-# model.load_state_dict(state_dict)
 model = torch.load("model.pt")
 model.eval()
 print("INFO: Model created.")
