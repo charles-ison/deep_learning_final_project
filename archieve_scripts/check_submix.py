@@ -27,4 +27,10 @@ for root, dirs, files in os.walk(path):
                 # os.rename(root,new_place)
                 i+=1
 print(i)
-    
+
+# path = "slakh2100_wav_redux/test"
+# count = 0
+# for folder in os.listdir(path):
+#     if folder.startswith("Track"):
+#         count += 1
+# print(count)
