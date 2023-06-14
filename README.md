@@ -48,10 +48,40 @@ read more about submodules:
 
 [Submodule intro from official website](https://git-scm.com/book/en/v2/Git-Tools-Submodules)
 
-## Data Split
+### archieve_scripts
+The scripts used for some early data preprocessing:
+
+`convert.sh` the bash script to convert audio from flac to wav using slakh-utils, if rerun is needed, move this file to upper directory.
+
+`submix.sh` the bash script to generate submix, if rerun is needed, move this file to upper directory.
+
+`check_submix.py` to check if the all submix is generated correctly
+
+`split.py` to split audio into small chunks (abandoned methond, we are using sampling instead, so only save it for archieve purpose, never rerun it)
+
+## Data Organization
 ### Subset convention:
 Slakh2100-orig: original split.
 
 Slakh2100-split2: move files to make sure no duplicate songs in train and test set. Can be transferd by `splits_v2.json`
 
-Slakh2100-redux: Remove the duplicate songs. Can be transferd by `redux.json`
+Slakh2100-redux: Slakh2100-redux: The subset we are using, it removed the duplicate songs. Can be transferd by `redux.json`
+
+### Data structure:
+```
+- fail_submix -> all the audio file which fails to generate submix, so omit this
+- omitted -> some duplicated audio from the dataset, so we omit them to prevent information leakage (also didn't generate submix for them)
+- train
+└─── Trackxxxxx
+│    └─── mix.wav -> full mixed audio (not needed for this project)
+│    └─── bass
+│         └─── bass.wav -> target bass audio
+│         └─── residuals.wav -> residuals audio
+│    ... -> other files not used in this project
+- validation
+└─── Trackxxxxx
+│    ...
+- test
+└─── Trackxxxxx
+│    ...
+```
