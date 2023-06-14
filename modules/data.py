@@ -105,9 +105,9 @@ class TrackDataset(Dataset):
                 sr = self.sample_rate
 
             start_sample = int(start_time * sr)
-            end_sampoe = start_sample + int(self.window_size * sr)
+            end_sample = start_sample + int(self.window_size * sr)
             # Extract the desired window from the waveform
-            sampled_waveform = wav[:, start_sample:end_sampoe]
+            sampled_waveform = wav[:, start_sample:end_sample]
             items.append(sampled_waveform)
         
         return items[1].squeeze(), items[0].squeeze()   # return residuals, bass

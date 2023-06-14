@@ -32,7 +32,7 @@ lr = params["lr"]
 # -----------------------------
 
 # ---------- Dataset ----------
-test_data_dir = '/nfs/hpc/share/stemgen/babyslakh_16k'
+test_data_dir = '/nfs/hpc/share/stemgen/mini/train'
 test_dataset = TrackDataset(test_data_dir)
 test_dataset.set_window_size(5)
 test_dataset.set_sample_rate(sample_rate)
@@ -46,7 +46,7 @@ mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
 encodec = EncodecWrapper().to(device)
 codebook_size = 1024
 num_q = encodec.num_quantizers
-print("INFO: Pretrained models loaded.")
+print("INFO: Encodec and Mert models loaded.")
 # -----------------------------
 
 # get example
@@ -62,7 +62,6 @@ _, max_len, mem_emb_dim = mem.shape
 print("mem.shape:", mem.shape)
 
 # load model
-# model = AudioTransformerDecoder(mem_emb_dim, codebook_size, max_len, embedding_dim, num_q, hidden_dim, num_layers, num_heads, dropout).to(device)
 # state_dict = torch.load("model.pth")
 # model.load_state_dict(state_dict)
 model = torch.load("model.pt")
@@ -95,7 +94,6 @@ with torch.no_grad():
         # insert the token to the prediction
         pred[:, i] = next_token
 
-print("pred.shape:", pred.shape)
 pred_wav = encodec.decode_from_codebook_indices(pred.to(device))
 pred_wav = pred_wav.reshape(1, -1).detach().cpu()
 print("pred_wav.shape:", pred_wav.shape)

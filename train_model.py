@@ -41,7 +41,7 @@ lr = params["lr"]
 # -----------------------------
 
 # ---------- Dataset ----------
-train_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/test'
+train_data_dir = '/nfs/hpc/share/stemgen/mini/train'
 train_dataset = TrackDataset(train_data_dir)
 train_dataset.set_window_size(5)
 train_dataset.set_sample_rate(sample_rate)
@@ -74,7 +74,6 @@ src_emb_dim = src.shape[-1]
 max_len = max(src.shape[1], tgt.shape[1])
 
 # Instantiate the model
-#model = AudioTransformer(enc_vocab_size, dec_vocab_size, max_len, dim_model, hidden_dim, num_layers, num_heads, dropout).to(device)
 model = AudioTransformerDecoder(src_emb_dim, codebook_size, max_len, embedding_dim, num_q, hidden_dim, num_layers, num_heads, dropout).to(device)
 print("INFO: Model created:", model)
 
