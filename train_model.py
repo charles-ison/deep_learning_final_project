@@ -11,6 +11,7 @@ from modules.audio_transformer_decoder import AudioTransformerDecoder
 from audiolm_pytorch.encodec import EncodecWrapper
 from modules.data import TrackDataset
 from modules.tokens import get_tokens
+from modules.positional_encoding import PositionalEncoding
 # from inference import generate_bass
 
 # ---------- neptune ----------
@@ -77,7 +78,9 @@ src_emb_dim = src.shape[-1]
 max_len = max(src.shape[1], tgt.shape[1])
 
 # Instantiate the model
-model = AudioTransformerDecoder(src_emb_dim, codebook_size, max_len, embedding_dim, num_q, hidden_dim, num_layers, num_heads, dropout).to(device)
+src_pe = PositionalEncoding(device, d_model=embedding_dim * num_q, dropout=dropout, max_len=max_len+1)
+tgt_pe = PositionalEncoding(device, d_model=embedding_dim * num_q, dropout=dropout, max_len=max_len+1)
+model = AudioTransformerDecoder(src_emb_dim, codebook_size, embedding_dim, num_q, hidden_dim, num_layers, num_heads, dropout).to(device)
 print("INFO: Model created:", model)
 
 if torch.cuda.device_count() > 1:
@@ -100,7 +103,8 @@ for epoch in range(num_epochs):
         tgt = tgt_tokens[:, :-1]            # [B, timesteps, num_quantizers]
 
         optimizer.zero_grad()
-        predicted_codes = model(mem, tgt, tgt_mask=tgt_mask)  # [B, L, Q, V]
+
+        predicted_codes = model(mem, tgt, src_pe, tgt_pe, tgt_mask=tgt_mask)  # [B, L, Q, V]
         loss = criterion(predicted_codes.permute(0, 3, 1, 2), tgt_tokens)
         if NEPTUNE_SWITCH == 1:
             runtime['train/loss'].log(loss)

@@ -2,8 +2,6 @@ import torch
 import torchaudio
 import torch.nn.functional as F
 
-
-
 def temperature_scaling(logits, temperature):
     # temp scaling
     scaled_logits = logits / temperature
@@ -34,7 +32,7 @@ def top_k_sampling(probs, k):
     return sample.reshape(1, num_q)
 
 
-def generate_bass(model, encodec, mem, sample_idx, num_q, sample_rate, device, k=1, temp=1.0):
+def generate_bass(model, encodec, mem, src_pe, tgt_pe, sample_idx, num_q, sample_rate, device, k=1, temp=1.0):
     seq_length = mem.shape[1]
 
     # Perform inference
@@ -44,7 +42,7 @@ def generate_bass(model, encodec, mem, sample_idx, num_q, sample_rate, device, k
         # Generate sequence
         for i in range(seq_length):
             # Decode the next token
-            decoder_output = model(mem, pred)
+            decoder_output = model(mem, pred, src_pe, tgt_pe)
 
             # Get the mdoel output for the next time step.
             logits = decoder_output[:, i]

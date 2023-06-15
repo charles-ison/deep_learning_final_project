@@ -11,6 +11,7 @@ from audiolm_pytorch.encodec import EncodecWrapper
 from modules.data import TrackDataset
 from modules.tokens import get_tokens
 from modules.generate import generate_bass
+from modules.positional_encoding import PositionalEncoding
 
 # ---------- neptune ----------
 NEPTUNE_SWITCH = 0
@@ -83,12 +84,15 @@ for sample_idx in range(num_examples):
     mem = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
     _, max_len, mem_emb_dim = mem.shape
 
+    src_pe = PositionalEncoding(device, d_model=embedding_dim * num_q, dropout=dropout, max_len=max_len+1)
+    tgt_pe = PositionalEncoding(device, d_model=embedding_dim * num_q, dropout=dropout, max_len=max_len+1)
+
     torchaudio.save(f"out/{sample_idx}_res.wav", residual_audio, sample_rate)
     print(f"INFO: out/{sample_idx}_res.wav saved.")
     torchaudio.save(f"out/{sample_idx}_tgt.wav", target_audio, sample_rate)
     print(f"INFO: out/{sample_idx}_tgt.wav saved.")
 
-    generate_bass(model, encodec, mem, sample_idx, num_q, sample_rate, device, k=2, temp=.99)
+    generate_bass(model, encodec, mem, src_pe, tgt_pe, sample_idx, num_q, sample_rate, device, k=2, temp=0.99)
 
 if NEPTUNE_SWITCH == 1:
     runtime["audio_files"].upload_files("*.wav")
