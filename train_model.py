@@ -12,7 +12,9 @@ from audiolm_pytorch.encodec import EncodecWrapper
 from modules.data import TrackDataset
 from modules.tokens import get_tokens
 from modules.positional_encoding import PositionalEncoding
-# from inference import generate_bass
+from modules.generate import generate_bass
+
+RUN_INFERENCE = 1
 
 # ---------- neptune ----------
 NEPTUNE_SWITCH = 1
@@ -43,6 +45,8 @@ lr = params["lr"]
 weight_decay = params["weight_decay"]
 num_q = params["num_quantizers"]
 window_size = params["window_size"]
+k = params["k"]
+temp = params["temperature"]
 # -----------------------------
 
 # ---------- Datasets ----------
@@ -100,7 +104,9 @@ criterion = nn.CrossEntropyLoss()
 best_loss = None
 tgt_mask = nn.Transformer.generate_square_subsequent_mask(max_len+1, device=device).unsqueeze(dim=0)
 
+
 for epoch in range(num_epochs):
+    train_loss = 0.0
     pbar = tq.tqdm(desc="Epoch {}".format(epoch+1), total=len(train_loader), unit="steps")
     for i, (residual_audio, tgt_audio) in enumerate(train_loader):
         # get tokens
@@ -113,16 +119,19 @@ for epoch in range(num_epochs):
 
         predicted_codes = model(mem, tgt, max_len+1, tgt_mask=tgt_mask)  # [B, L, Q, V]
         loss = criterion(predicted_codes.permute(0, 3, 1, 2), tgt_tokens)
+        train_loss += loss.item()
         
-        # Log after every 10 steps
-        if i % 1 == 0 and NEPTUNE_SWITCH == 1:
+        # Log after every 1/10th epoch
+        if i % (1 - (len(train_loader) // 10)) == 0 and NEPTUNE_SWITCH == 1:
             runtime['train/loss'].log(loss)
         loss.backward()
         optimizer.step()
 
         pbar.update(1)
     pbar.close()
-    print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.4f}")
+    epoch_loss = train_loss / len(train_loader)
+    runtime['epoch/train/loss'].log(epoch_loss)
+    print(f"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}")
 
     # validation
     model.eval()
@@ -140,11 +149,14 @@ for epoch in range(num_epochs):
             loss = criterion(predicted_codes.permute(0, 3, 1, 2), tgt_tokens)
             val_loss += loss.item()
 
-            # Log after every 10 steps
-            if i % 5 == 0 and NEPTUNE_SWITCH == 1:
+            # Log after every 1/10th epoch
+            if i % (1 - (len(val_loader) // 10)) and NEPTUNE_SWITCH == 1:
                 runtime["validation/loss"].log(loss)
 
         epoch_loss = val_loss / len(val_loader)
+        runtime["epoch/validation/loss"].log(epoch_loss)
+
+        print(f"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}")
     
     if not best_loss or epoch_loss < best_loss:
         # NOTE: look at alternative model saving strat
@@ -152,5 +164,18 @@ for epoch in range(num_epochs):
         torch.save(model, "model.pt")
         if NEPTUNE_SWITCH == 1:
             runtime["model"].upload("model.pt")
+            print(f"INFO: saved model to neptune.")
+
+        if RUN_INFERENCE == 1:
+            residual_audio, tgt_audio = val_dataset[0]
+            semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio.unsqueeze(0), tgt_audio.unsqueeze(0), mert_processor, mert, encodec, sample_rate, device)
+            mem = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
+            tgt = tgt_tokens[:, :-1] 
+
+            generate_bass(model, encodec, mem[0].unsqueeze(0), epoch, num_q, sample_rate, max_len, device, k=k, temp=temp)
+
+            if NEPTUNE_SWITCH == 1:
+                runtime["audio_files"].upload_files("out/*.wav")
+                print(f"INFO: saved audio to neptune.")
         best_loss = loss
 

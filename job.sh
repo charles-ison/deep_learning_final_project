@@ -5,7 +5,7 @@
 #SBATCH --job-name=stemgen
 #SBATCH -t 3-00:00:00
 #SBATCH -c 1
-#SBATCH --mem=128G
+#SBATCH --mem=124G
 #SBATCH --gres=gpu:2
 #SBATCH --export=ALL
 
