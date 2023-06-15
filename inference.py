@@ -13,7 +13,7 @@ from modules.tokens import get_tokens
 from modules.generate import generate_bass
 
 # ---------- neptune ----------
-NEPTUNE_SWITCH = 1
+NEPTUNE_SWITCH = 0
 if NEPTUNE_SWITCH == 1:
     from neptune_init import runtime
     from neptune.utils import stringify_unsupported
@@ -70,7 +70,7 @@ if torch.cuda.device_count() > 1:
     print("Multiple GPUs available, using: " + str(torch.cuda.device_count()))
     model = nn.DataParallel(model)
 
-num_examples = 2
+num_examples = 3
 
 for sample_idx in range(num_examples):
     # get example
@@ -82,14 +82,13 @@ for sample_idx in range(num_examples):
     semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, target_audio, mert_processor, mert, encodec, sample_rate, device)
     mem = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
     _, max_len, mem_emb_dim = mem.shape
-    print("mem.shape:", mem.shape)
 
-    torchaudio.save(f"{sample_idx}_res.wav", residual_audio, sample_rate)
-    print(f"INFO: {sample_idx}_res.wav saved.")
-    torchaudio.save(f"{sample_idx}_tgt.wav", target_audio, sample_rate)
-    print(f"INFO: {sample_idx}_tgt.wav saved.")
+    torchaudio.save(f"inference/{sample_idx}_res.wav", residual_audio, sample_rate)
+    print(f"INFO: inference/{sample_idx}_res.wav saved.")
+    torchaudio.save(f"inference/{sample_idx}_tgt.wav", target_audio, sample_rate)
+    print(f"INFO: inference/{sample_idx}_tgt.wav saved.")
 
-    generate_bass(model, encodec, mem, sample_idx, num_q, sample_rate, device)
+    generate_bass(model, encodec, mem, sample_idx, num_q, sample_rate, device, k=1, temp=1.)
 
 if NEPTUNE_SWITCH == 1:
     runtime["audio_files"].upload_files("*.wav")
