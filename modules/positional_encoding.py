@@ -3,9 +3,6 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-# Adapted from here: https://pytorch.org/tutorials/beginner/transformer_tutorial.html
-# TODO: If there is time, use relative positional embeddings instead
-#   See: https://arxiv.org/pdf/1803.02155.pdf and https://arxiv.org/pdf/1809.04281.pdf
 class PositionalEncoding(nn.Module):
     def __init__(self, device, d_model: int, max_len: int, dropout: float = 0.1):
         super().__init__()
