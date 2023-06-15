@@ -156,7 +156,7 @@ for epoch in range(num_epochs):
         epoch_loss = val_loss / len(val_loader)
         runtime["epoch/validation/loss"].log(epoch_loss)
 
-        print(f"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}")
+        print(f"Epoch {epoch+1}/{num_epochs}, Validation Loss: {epoch_loss:.4f}")
     
     if not best_loss or epoch_loss < best_loss:
         # NOTE: look at alternative model saving strat
