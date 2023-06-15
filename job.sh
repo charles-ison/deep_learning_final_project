@@ -4,7 +4,7 @@
 #SBATCH -A cascades
 #SBATCH --job-name=stemgen
 #SBATCH -t 3-00:00:00
-#SBATCH -c 6
+#SBATCH -c 1
 #SBATCH --mem=128G
 #SBATCH --gres=gpu:2
 #SBATCH --export=ALL

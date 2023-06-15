@@ -11,6 +11,7 @@ from modules.audio_transformer_decoder import AudioTransformerDecoder
 from audiolm_pytorch.encodec import EncodecWrapper
 from modules.data import TrackDataset
 from modules.tokens import get_tokens
+# from inference import generate_bass
 
 # ---------- neptune ----------
 NEPTUNE_SWITCH = 1
@@ -38,12 +39,14 @@ num_epochs = params["num_epochs"]
 sample_rate = params["sample_rate"]
 batch_size = params["batch_size"]
 lr = params["lr"]
+num_q = params["num_quantizers"]
+window_size = params["window_size"]
 # -----------------------------
 
 # ---------- Dataset ----------
-train_data_dir = '/nfs/hpc/share/stemgen/mini/train'
+train_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/train'
 train_dataset = TrackDataset(train_data_dir)
-train_dataset.set_window_size(5)
+train_dataset.set_window_size(window_size)
 train_dataset.set_sample_rate(sample_rate)
 
 train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
@@ -55,7 +58,7 @@ print("INFO: Dataset loaded. Length:", len(train_dataset))
 mert_processor = Wav2Vec2FeatureExtractor.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
 # TODO: Look into checnging sequence length.
 mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
-encodec = EncodecWrapper().to(device)
+encodec = EncodecWrapper(num_quantizers = num_q).to(device)
 codebook_size = 1024
 num_q = encodec.num_quantizers
 print("INFO: Encodec and Mert models loaded.")
@@ -94,7 +97,7 @@ for epoch in range(num_epochs):
         semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, sample_rate, device)
         mem = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
         # trimming extra encodec sample to match Mert.
-        tgt = tgt_tokens[:, :-1]            # [B, timesteps, num_quantizers=8]
+        tgt = tgt_tokens[:, :-1]            # [B, timesteps, num_quantizers]
 
         optimizer.zero_grad()
         predicted_codes = model(mem, tgt, tgt_mask=tgt_mask)  # [B, L, Q, V]
