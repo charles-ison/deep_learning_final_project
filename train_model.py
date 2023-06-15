@@ -121,8 +121,8 @@ for epoch in range(num_epochs):
         loss = criterion(predicted_codes.permute(0, 3, 1, 2), tgt_tokens)
         train_loss += loss.item()
         
-        # Log after every 1/10th epoch
-        if i % (1 - (len(train_loader) // 10)) == 0 and NEPTUNE_SWITCH == 1:
+        # Log after every 10 steps
+        if i % 10 == 0 and NEPTUNE_SWITCH == 1:
             runtime['train/loss'].log(loss)
         loss.backward()
         optimizer.step()
@@ -149,8 +149,8 @@ for epoch in range(num_epochs):
             loss = criterion(predicted_codes.permute(0, 3, 1, 2), tgt_tokens)
             val_loss += loss.item()
 
-            # Log after every 1/10th epoch
-            if i % (1 - (len(val_loader) // 10)) and NEPTUNE_SWITCH == 1:
+            # Log after every 10 steps
+            if i % 10 and NEPTUNE_SWITCH == 1:
                 runtime["validation/loss"].log(loss)
 
         epoch_loss = val_loss / len(val_loader)
