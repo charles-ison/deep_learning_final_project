@@ -40,12 +40,13 @@ num_epochs = params["num_epochs"]
 sample_rate = params["sample_rate"]
 batch_size = params["batch_size"]
 lr = params["lr"]
+weight_decay = params["weight_decay"]
 num_q = params["num_quantizers"]
 window_size = params["window_size"]
 # -----------------------------
 
 # ---------- Datasets ----------
-train_data_dir = '/nfs/hpc/share/stemgen/mini/train'
+train_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/train'
 train_dataset = TrackDataset(train_data_dir)
 train_dataset.set_window_size(window_size)
 train_dataset.set_sample_rate(sample_rate)
@@ -53,13 +54,13 @@ train_dataset.set_sample_rate(sample_rate)
 train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
 print("INFO: Train dataset loaded. Length:", len(train_dataset))
 
-val_data_dir = '/nfs/hpc/share/stemgen/mini/test'
-val_dataset = TrackDataset(train_data_dir)
+val_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/test'
+val_dataset = TrackDataset(val_data_dir)
 val_dataset.set_window_size(window_size)
 val_dataset.set_sample_rate(sample_rate)
 
-val_loader = DataLoader(train_dataset, batch_size, shuffle=True)
-print("INFO: Validation dataset loaded. Length:", len(train_dataset))
+val_loader = DataLoader(val_dataset, batch_size, shuffle=True)
+print("INFO: Validation dataset loaded. Length:", len(val_dataset))
 # -----------------------------
 
 # ---------- Models ----------
@@ -93,7 +94,7 @@ if torch.cuda.device_count() > 1:
     print("Multiple GPUs available, using: " + str(torch.cuda.device_count()))
     model = nn.DataParallel(model)
 
-optimizer = torch.optim.Adam(model.parameters(), lr)
+optimizer = torch.optim.Adam(model.parameters(), lr, weight_decay=weight_decay)
 criterion = nn.CrossEntropyLoss()
 
 best_loss = None
@@ -114,7 +115,7 @@ for epoch in range(num_epochs):
         loss = criterion(predicted_codes.permute(0, 3, 1, 2), tgt_tokens)
         
         # Log after every 10 steps
-        if i % 10 == 0 and NEPTUNE_SWITCH == 1:
+        if i % 1 == 0 and NEPTUNE_SWITCH == 1:
             runtime['train/loss'].log(loss)
         loss.backward()
         optimizer.step()
@@ -140,7 +141,7 @@ for epoch in range(num_epochs):
             val_loss += loss.item()
 
             # Log after every 10 steps
-            if i % 10 == 0 and NEPTUNE_SWITCH == 1:
+            if i % 5 == 0 and NEPTUNE_SWITCH == 1:
                 runtime["validation/loss"].log(loss)
 
         epoch_loss = val_loss / len(val_loader)
