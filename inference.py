@@ -44,7 +44,7 @@ window_size = params["window_size"]
 # -----------------------------
 
 # ---------- Dataset ----------
-test_data_dir = '/nfs/hpc/share/stemgen/babyslakh_16k'
+test_data_dir = '/nfs/hpc/share/stemgen/mini/train'
 test_dataset = TrackDataset(test_data_dir)
 test_dataset.set_window_size(window_size)
 test_dataset.set_sample_rate(sample_rate)
@@ -69,13 +69,12 @@ if torch.cuda.device_count() > 1:
     print("Multiple GPUs available, using: " + str(torch.cuda.device_count()))
     model = nn.DataParallel(model)
 
-
-def generate_bass(model, encodec, mem, sample_idx):
+def generate_bass(model, device, encodec, mem, sample_idx):
     seq_length = mem.shape[1]
 
     # Perform inference
     with torch.no_grad():
-        pred = torch.zeros(1, seq_length, num_q).long()
+        pred = torch.zeros(1, seq_length, num_q).long().to(device)
 
         # Generate sequence
         for i in range(seq_length):
@@ -114,7 +113,7 @@ for sample_idx in range(num_examples):
     torchaudio.save(f"{sample_idx}_tgt.wav", target_audio, sample_rate)
     print(f"INFO: {sample_idx}_tgt.wav saved.")
 
-    generate_bass(model, encodec, mem, sample_idx)
+    generate_bass(model, device, encodec, mem, sample_idx)
 
 if NEPTUNE_SWITCH == 1:
     runtime["audio_files"].upload_files("*.wav")
