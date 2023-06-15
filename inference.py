@@ -69,7 +69,11 @@ if torch.cuda.device_count() > 1:
     print("Multiple GPUs available, using: " + str(torch.cuda.device_count()))
     model = nn.DataParallel(model)
 
-def generate_bass(model, device, encodec, mem, sample_idx):
+<<<<<<< Updated upstream
+=======
+
+>>>>>>> Stashed changes
+def generate_bass(model, encodec, mem, sample_idx, device):
     seq_length = mem.shape[1]
 
     # Perform inference
@@ -113,7 +117,7 @@ for sample_idx in range(num_examples):
     torchaudio.save(f"{sample_idx}_tgt.wav", target_audio, sample_rate)
     print(f"INFO: {sample_idx}_tgt.wav saved.")
 
-    generate_bass(model, device, encodec, mem, sample_idx)
+    generate_bass(model, encodec, mem, sample_idx, device)
 
 if NEPTUNE_SWITCH == 1:
     runtime["audio_files"].upload_files("*.wav")

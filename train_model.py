@@ -14,7 +14,7 @@ from modules.tokens import get_tokens
 # from inference import generate_bass
 
 # ---------- neptune ----------
-NEPTUNE_SWITCH = 1
+NEPTUNE_SWITCH = 0
 if NEPTUNE_SWITCH == 1:
     from neptune_init import runtime
     from neptune.utils import stringify_unsupported
@@ -44,7 +44,7 @@ window_size = params["window_size"]
 # -----------------------------
 
 # ---------- Dataset ----------
-train_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/train'
+train_data_dir = '/nfs/hpc/share/stemgen/mini/train'
 train_dataset = TrackDataset(train_data_dir)
 train_dataset.set_window_size(window_size)
 train_dataset.set_sample_rate(sample_rate)
