@@ -5,45 +5,32 @@ import torch.nn.functional as F
 
 
 def temperature_scaling(logits, temperature):
-    # leaving print statements for dependant stream sampling developement
-    # NOTE: remove prints after developement
-
-    # logits = torch.sum(logits, dim=-1)
-    # print("logits:", logits.shape)
+    # temp scaling
     scaled_logits = logits / temperature
-    # print("scaled_logits:", scaled_logits)
-    scaled_logits -= torch.max(scaled_logits, dim=-1, keepdim=True)[0]  # subtract the maximum for numerical stability
+    # subtract the maximum for numerical stability
+    scaled_logits -= torch.max(scaled_logits, dim=-1, keepdim=True)[0] 
+    # softmax
     scaled_probs = torch.exp(scaled_logits) / torch.sum(torch.exp(scaled_logits), dim=-1, keepdim=True)
-    # print("scaled_probs:", scaled_probs)
+
+    if temperature == 1:
+        return logits
 
     return scaled_probs
 
 
 def top_k_sampling(probs, k):
-    # leaving print statements for dependant stream sampling developement
-    # NOTE: remove prints after developement
-
-    # print("probs.shape:", probs.shape)
     batch_size, num_q, emb_dim = probs.shape
     topk_probs, topk_indices = torch.topk(probs, k=k, dim=-1)
-    # print("topk_probs:", topk_probs)
-    # print("topk_indices:", topk_indices)
     
     # Normalize probabilities to make them sum to 1
     normalized_probs = topk_probs / torch.sum(topk_probs, dim=-1, keepdim=True)
     normalized_probs = normalized_probs.reshape(-1, k)
-    # print("normalized_probs:", normalized_probs)
 
     # Sampling from the top-k probabilities
     sample_idxs = torch.multinomial(normalized_probs, num_samples=1)
     sample_idxs = sample_idxs.reshape(batch_size, num_q, 1)
-    # print("topk_indices.shape:", topk_indices.shape)
-    # print("topk_indices:", topk_indices)
-    # print("sample_idxs:", sample_idxs)
     sample = torch.gather(topk_indices, -1, sample_idxs)
-    # print("sample", sample)
-    # print("sample.shape", sample.shape)
-    # exit()
+
     return sample.reshape(1, num_q)
 
 
@@ -74,5 +61,5 @@ def generate_bass(model, encodec, mem, sample_idx, num_q, sample_rate, device, k
     pred_wav = pred_wav.reshape(1, -1).detach().cpu()
     print("pred_wav.shape:", pred_wav.shape)
 
-    torchaudio.save(f"inference/{sample_idx}_out.wav", pred_wav, sample_rate)
-    print(f"INFO: inference/{sample_idx}_out.wav saved.")
+    torchaudio.save(f"out/{sample_idx}_out.wav", pred_wav, sample_rate)
+    print(f"INFO: out/{sample_idx}_out.wav saved.")
