@@ -55,7 +55,7 @@ print("INFO: Dataset loaded. Length:", len(test_dataset))
 # ---------- models ----------
 mert_processor = Wav2Vec2FeatureExtractor.from_pretrained("m-a-p/MERT-v1-95M",trust_remote_code=True)
 # TODO: Look into changing encoding length.
-mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
+mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True).to("cuda")
 encodec = EncodecWrapper(num_quantizers = num_q).to(device)
 codebook_size = 1024
 num_q = encodec.num_quantizers

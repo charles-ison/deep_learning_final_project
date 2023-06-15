@@ -6,7 +6,7 @@ def get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, resampl
 
     # forward passes
     audio_features = mert_processor(list_residual_audio, sampling_rate=resample_rate, do_normalize=False, return_tensors="pt")
-    mert_outputs = mert(**audio_features, output_hidden_states=True)
+    mert_outputs = mert(**audio_features.to(device), output_hidden_states=True)
     codes = encodec(tgt_audio, return_encoded=False)
     tgt_tokens = codes[1].long().to(device)
 
