@@ -14,7 +14,7 @@ from modules.tokens import get_tokens
 # from inference import generate_bass
 
 # ---------- neptune ----------
-NEPTUNE_SWITCH = 1
+NEPTUNE_SWITCH = 0
 if NEPTUNE_SWITCH == 1:
     from neptune_init import runtime
     from neptune.utils import stringify_unsupported
@@ -44,7 +44,7 @@ window_size = params["window_size"]
 # -----------------------------
 
 # ---------- Dataset ----------
-train_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/train'
+train_data_dir = '/nfs/hpc/share/stemgen/mini/train'
 train_dataset = TrackDataset(train_data_dir)
 train_dataset.set_window_size(window_size)
 train_dataset.set_sample_rate(sample_rate)
@@ -57,7 +57,7 @@ print("INFO: Dataset loaded. Length:", len(train_dataset))
 # TODO: Put these models on multiple gpus?
 mert_processor = Wav2Vec2FeatureExtractor.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
 # TODO: Look into checnging sequence length.
-mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
+mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True).to("cuda")
 encodec = EncodecWrapper(num_quantizers = num_q).to(device)
 codebook_size = 1024
 num_q = encodec.num_quantizers
