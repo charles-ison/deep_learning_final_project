@@ -15,7 +15,7 @@ from modules.positional_encoding import PositionalEncoding
 # from inference import generate_bass
 
 # ---------- neptune ----------
-NEPTUNE_SWITCH = 0
+NEPTUNE_SWITCH = 1
 if NEPTUNE_SWITCH == 1:
     from neptune_init import runtime
     from neptune.utils import stringify_unsupported
@@ -44,14 +44,22 @@ num_q = params["num_quantizers"]
 window_size = params["window_size"]
 # -----------------------------
 
-# ---------- Dataset ----------
+# ---------- Datasets ----------
 train_data_dir = '/nfs/hpc/share/stemgen/mini/train'
 train_dataset = TrackDataset(train_data_dir)
 train_dataset.set_window_size(window_size)
 train_dataset.set_sample_rate(sample_rate)
 
 train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
-print("INFO: Dataset loaded. Length:", len(train_dataset))
+print("INFO: Train dataset loaded. Length:", len(train_dataset))
+
+val_data_dir = '/nfs/hpc/share/stemgen/mini/test'
+val_dataset = TrackDataset(train_data_dir)
+val_dataset.set_window_size(window_size)
+val_dataset.set_sample_rate(sample_rate)
+
+val_loader = DataLoader(train_dataset, batch_size, shuffle=True)
+print("INFO: Validation dataset loaded. Length:", len(train_dataset))
 # -----------------------------
 
 # ---------- Models ----------
@@ -104,7 +112,9 @@ for epoch in range(num_epochs):
 
         predicted_codes = model(mem, tgt, max_len+1, tgt_mask=tgt_mask)  # [B, L, Q, V]
         loss = criterion(predicted_codes.permute(0, 3, 1, 2), tgt_tokens)
-        if NEPTUNE_SWITCH == 1:
+        
+        # Log after every 10 steps
+        if i % 10 == 0 and NEPTUNE_SWITCH == 1:
             runtime['train/loss'].log(loss)
         loss.backward()
         optimizer.step()
@@ -112,7 +122,30 @@ for epoch in range(num_epochs):
         pbar.update(1)
     pbar.close()
     print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item():.4f}")
-    if not best_loss or loss < best_loss:
+
+    # validation
+    model.eval()
+
+    val_loss = 0.0
+    with torch.no_grad():
+        for i, (residual_audio, tgt_audio) in enumerate(val_loader):
+            # get tokens
+            semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, sample_rate, device)
+            mem = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
+            # trimming extra encodec sample to match Mert.
+            tgt = tgt_tokens[:, :-1]            # [B, timesteps, num_quantizers]
+
+            predicted_codes = model(mem, tgt, max_len+1, tgt_mask=tgt_mask)  # [B, L, Q, V]
+            loss = criterion(predicted_codes.permute(0, 3, 1, 2), tgt_tokens)
+            val_loss += loss.item()
+
+            # Log after every 10 steps
+            if i % 10 == 0 and NEPTUNE_SWITCH == 1:
+                runtime["validation/loss"].log(loss)
+
+        epoch_loss = val_loss / len(val_loader)
+    
+    if not best_loss or epoch_loss < best_loss:
         # NOTE: look at alternative model saving strat
         print("Best loss achieved, saving model.")
         torch.save(model, "model.pt")
