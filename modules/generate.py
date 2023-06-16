@@ -32,7 +32,7 @@ def top_k_sampling(probs, k):
     return sample.reshape(1, num_q)
 
 
-def generate_bass(model, encodec, mem, sample_idx, num_q, sample_rate, max_len, device, k=1, temp=1.0):
+def generate_bass(model, encodec, mem, sample_idx, num_q, sample_rate, max_len, output_dir, device, k=1, temp=1.0):
     seq_length = mem.shape[1]
 
     # Perform inference
@@ -59,5 +59,5 @@ def generate_bass(model, encodec, mem, sample_idx, num_q, sample_rate, max_len, 
     pred_wav = pred_wav.reshape(1, -1).detach().cpu()
     print("pred_wav.shape:", pred_wav.shape)
 
-    torchaudio.save(f"out/{sample_idx}_out.wav", pred_wav, sample_rate)
-    print(f"INFO: out/{sample_idx}_out.wav saved.")
+    torchaudio.save(f"{output_dir}{sample_idx}_out.wav", pred_wav, sample_rate)
+    print(f"INFO: {output_dir}{sample_idx}_out.wav saved.")

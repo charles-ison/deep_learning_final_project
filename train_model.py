@@ -21,6 +21,7 @@ NEPTUNE_SWITCH = 1
 if NEPTUNE_SWITCH == 1:
     from neptune_init import runtime
     from neptune.utils import stringify_unsupported
+    log_every = 5          # log loss every 'log_every' steps
 # -----------------------------
 
 print("torch.cuda.is_available(): " + str(torch.cuda.is_available()))
@@ -65,6 +66,11 @@ val_dataset.set_sample_rate(sample_rate)
 
 val_loader = DataLoader(val_dataset, batch_size, shuffle=True)
 print("INFO: Validation dataset loaded. Length:", len(val_dataset))
+
+if RUN_INFERENCE == 1:
+    inf_residual_audio, inf_tgt_audio = val_dataset[0]
+    output_dir = "out/"
+    inf_every = 5       # run inference every 'inf_every' epoch
 # -----------------------------
 
 # ---------- Models ----------
@@ -121,8 +127,8 @@ for epoch in range(num_epochs):
         loss = criterion(predicted_codes.permute(0, 3, 1, 2), tgt_tokens)
         train_loss += loss.item()
         
-        # Log after every 10 steps
-        if i % 10 == 0 and NEPTUNE_SWITCH == 1:
+        # Log after every "log_every" steps
+        if i % log_every == 0 and NEPTUNE_SWITCH == 1:
             runtime['train/loss'].log(loss)
         loss.backward()
         optimizer.step()
@@ -130,7 +136,8 @@ for epoch in range(num_epochs):
         pbar.update(1)
     pbar.close()
     epoch_loss = train_loss / len(train_loader)
-    runtime['epoch/train/loss'].log(epoch_loss)
+    if NEPTUNE_SWITCH == 1:
+        runtime['epoch/train/loss'].log(epoch_loss)
     print(f"Epoch {epoch+1}/{num_epochs}, Loss: {epoch_loss:.4f}")
 
     # validation
@@ -149,12 +156,13 @@ for epoch in range(num_epochs):
             loss = criterion(predicted_codes.permute(0, 3, 1, 2), tgt_tokens)
             val_loss += loss.item()
 
-            # Log after every 10 steps
-            if i % 10 and NEPTUNE_SWITCH == 1:
+            # Log after every "log_every" steps
+            if i % log_every and NEPTUNE_SWITCH == 1:
                 runtime["validation/loss"].log(loss)
 
         epoch_loss = val_loss / len(val_loader)
-        runtime["epoch/validation/loss"].log(epoch_loss)
+        if NEPTUNE_SWITCH == 1:
+            runtime["epoch/validation/loss"].log(epoch_loss)
 
         print(f"Epoch {epoch+1}/{num_epochs}, Validation Loss: {epoch_loss:.4f}")
     
@@ -165,17 +173,16 @@ for epoch in range(num_epochs):
         if NEPTUNE_SWITCH == 1:
             runtime["model"].upload("model.pt")
             print(f"INFO: saved model to neptune.")
+        best_loss = loss
 
-        if RUN_INFERENCE == 1:
-            residual_audio, tgt_audio = val_dataset[0]
-            semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio.unsqueeze(0), tgt_audio.unsqueeze(0), mert_processor, mert, encodec, sample_rate, device)
+    if epoch % inf_every == 0:
+            semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(inf_residual_audio.unsqueeze(0), inf_tgt_audio.unsqueeze(0), mert_processor, mert, encodec, sample_rate, device)
             mem = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
             tgt = tgt_tokens[:, :-1] 
 
-            generate_bass(model, encodec, mem[0].unsqueeze(0), epoch, num_q, sample_rate, max_len, device, k=k, temp=temp)
+            generate_bass(model, encodec, mem[0].unsqueeze(0), epoch, num_q, sample_rate, max_len, output_dir, device, k=k, temp=temp)
 
             if NEPTUNE_SWITCH == 1:
-                runtime["audio_files"].upload_files("out/*.wav")
+                runtime["audio_files"].upload_files([f"out/{epoch}_out.wav"])
                 print(f"INFO: saved audio to neptune.")
-        best_loss = loss
 
