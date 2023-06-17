@@ -109,7 +109,7 @@ class TrackDataset(Dataset):
             # Extract the desired window from the waveform
             sampled_waveform = wav[:, start_sample:end_sample]
             items.append(sampled_waveform)
-        
+
         return items[1].squeeze(), items[0].squeeze()   # return residuals, bass
 
 # a help function to get the audio duration of a wav tensor
