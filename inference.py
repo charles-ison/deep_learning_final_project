@@ -5,6 +5,10 @@ import torchaudio
 import torch.nn as nn
 import json
 
+import numpy as np
+from scipy.spatial.distance import cdist
+import librosa
+
 from modules.audio_transformer import AudioTransformer
 from modules.audio_transformer_decoder import AudioTransformerDecoder
 from audiolm_pytorch.encodec import EncodecWrapper
@@ -24,15 +28,15 @@ print("torch.cuda.is_available(): " + str(torch.cuda.is_available()))
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # ---------- params -----------
-model_path = "out/295_model.pt"
-# test_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/test'
-test_data_dir = '/nfs/hpc/share/stemgen/chase_dataset'
+model_path = "model_chase.pt"
+test_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/test'
+# test_data_dir = '/nfs/hpc/share/stemgen/chase_dataset'
 output_dir = "test/"
 
-k=256
-temp=1.0
+k=8
+temp=0.99
 
-num_examples = 3
+num_examples = 20
 window_size = 5
 sample_rate = 24000
 num_q = 8
