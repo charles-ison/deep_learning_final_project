@@ -4,13 +4,13 @@
     "num_layers": 24,
     "num_heads": 16,
     "dropout": 0.1,
-    "num_epochs": 100,
+    "num_epochs": 500,
     "sample_rate": 24000,
-    "batch_size": 1,
+    "batch_size": 5,
     "lr": 4e-4,
     "weight_decay": 1e-2,
     "num_quantizers": 8,
-    "window_size": 10,
+    "window_size": 5,
     "k": 10,
     "temperature": 0.99
 }

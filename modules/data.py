@@ -109,8 +109,14 @@ class TrackDataset(Dataset):
             # Extract the desired window from the waveform
             sampled_waveform = wav[:, start_sample:end_sample]
             items.append(sampled_waveform)
+        
+        residual_audio = items[1]
+        target_audio = items[0]
 
-        return items[1].squeeze(), items[0].squeeze()   # return residuals, bass
+        residual_audio = residual_audio.squeeze() if residual_audio.shape[0] == 1 else residual_audio.mean(0)
+        target_audio = target_audio.squeeze() if target_audio.shape[0] == 1 else target_audio.mean(0)
+
+        return residual_audio, target_audio
 
 # a help function to get the audio duration of a wav tensor
 def get_duration(wav_tensor, sample_rate):

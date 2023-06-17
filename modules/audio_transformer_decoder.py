@@ -16,7 +16,8 @@ class AudioTransformerDecoder(nn.Module):
         # embedding layers
         self.tgt_embedding = nn.Embedding(tgt_voc_size, embedding_dim)
         
-        self.mem_fc = nn.Linear(mem_input_size, dim_model)
+        self.mem_embedding = nn.Embedding(tgt_voc_size, embedding_dim)
+        # self.mem_fc = nn.Linear(mem_input_size, dim_model)
 
         transformer_decoder_layer = nn.TransformerDecoderLayer(d_model=dim_model, nhead=num_heads, dim_feedforward=hidden_dim,
                                                                dropout=dropout, batch_first=True, norm_first=True)
@@ -40,10 +41,13 @@ class AudioTransformerDecoder(nn.Module):
         if tgt_mask != None:
             tgt_mask = tgt_mask.repeat(self.num_heads * tgt.shape[0], 1, 1)
 
-        mem, tgt = self.mem_fc(mem), self.tgt_embedding(tgt)
+        mem, tgt = self.mem_embedding(mem), self.tgt_embedding(tgt)
 
         tgt = tgt.permute(0, 1, 3, 2)
         tgt = torch.flatten(tgt, start_dim=2)
+
+        mem = mem.permute(0, 1, 3, 2)
+        mem = torch.flatten(mem, start_dim=2)
 
         start_tokens = self.start_token.repeat(tgt.shape[0], 1, 1)
         mem = torch.cat((start_tokens, mem), dim = 1)
@@ -59,4 +63,4 @@ class AudioTransformerDecoder(nn.Module):
         # unflatten out
         logits = torch.unflatten(logits, -1, (self.num_q, self.tgt_voc_size))
 
-        return logits
+        return logits[:, :-1]

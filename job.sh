@@ -1,14 +1,12 @@
 #!/bin/bash
-#SBATCH -w cn-m-2
-#SBATCH -p cascades
-#SBATCH -A cascades
+#SBATCH -w dgx2-6
+#SBATCH -p dgx2
 #SBATCH --job-name=stemgen
-#SBATCH -t 3-00:00:00
-#SBATCH -c 1
-#SBATCH --mem=124G
-#SBATCH --gres=gpu:2
+#SBATCH -t 1-00:00:00
+#SBATCH -c 4
+#SBATCH --mem=256G
+#SBATCH --gres=gpu:8
 #SBATCH --export=ALL
-
 
 #SBATCH -o logs/train_model.out
 #SBATCH -e logs/train_model.err

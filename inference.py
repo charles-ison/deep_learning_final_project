@@ -3,7 +3,6 @@ from transformers import AutoModel
 import torch
 import torchaudio
 import torch.nn as nn
-import json
 
 import numpy as np
 from scipy.spatial.distance import cdist
@@ -28,9 +27,9 @@ print("torch.cuda.is_available(): " + str(torch.cuda.is_available()))
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # ---------- params -----------
-model_path = "model_chase.pt"
+model_path = "model.pt"
 test_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/test'
-# test_data_dir = '/nfs/hpc/share/stemgen/chase_dataset'
+# test_data_dir = '/nfs/hpc/share/stemgen/sin_wave_test'
 output_dir = "test/"
 
 k=8
@@ -50,13 +49,17 @@ print("INFO: Dataset loaded. Length:", len(test_dataset))
 # -----------------------------
 
 # ---------- pretrained models ----------
-mert_processor = Wav2Vec2FeatureExtractor.from_pretrained("m-a-p/MERT-v1-95M",trust_remote_code=True)
-# TODO: Look into changing encoding length.
-mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True).to("cuda")
-encodec = EncodecWrapper(num_quantizers = num_q).to(device)
+# mert_processor = Wav2Vec2FeatureExtractor.from_pretrained("m-a-p/MERT-v1-95M",trust_remote_code=True)
+# # TODO: Look into changing encoding length.
+# mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True).to("cuda")
+mert_processor = None
+mert = None
+
+encodec = EncodecWrapper().to(device)
 codebook_size = 1024
 num_q = encodec.num_quantizers
 print("INFO: Encodec and Mert models loaded.")
+
 
 # Our Model
 model = torch.load(model_path)
@@ -74,8 +77,10 @@ for sample_idx in range(num_examples):
     target_audio = target_audio.reshape(1, -1)
 
     # tokens
-    semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, target_audio, mert_processor, mert, encodec, sample_rate, device, num_q)
-    mem = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
+    mem_tokens, tgt_tokens = get_tokens(residual_audio, target_audio, mert_processor, mert, encodec, sample_rate, device)
+    # trimming extra encodec sample to match Mert.
+    tgt = tgt_tokens[:, :-1]            # [B, timesteps, num_quantizers]
+    mem = mem_tokens
     _, max_len, mem_emb_dim = mem.shape
 
     torchaudio.save(f"{output_dir}{sample_idx}_res.wav", residual_audio, sample_rate)
@@ -83,7 +88,7 @@ for sample_idx in range(num_examples):
     torchaudio.save(f"{output_dir}{sample_idx}_tgt.wav", target_audio, sample_rate)
     print(f"INFO: {output_dir}{sample_idx}_tgt.wav saved.")
 
-    generate_bass(model, encodec, mem, sample_idx, num_q, sample_rate, max_len, output_dir, device, k=k, temp=temp)
+    pred_wav = generate_bass(model, encodec, mem, sample_idx, num_q, sample_rate, max_len, output_dir, device, k=k, temp=temp)
 
 if NEPTUNE_SWITCH == 1:
     runtime["audio_files"].upload_files("*.wav")

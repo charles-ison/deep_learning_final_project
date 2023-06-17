@@ -52,7 +52,7 @@ temp = params["temperature"]
 
 # ---------- Datasets ----------
 # train_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/train'
-train_data_dir = '/nfs/hpc/share/stemgen/chase_dataset'
+train_data_dir = '/nfs/hpc/share/stemgen/chase_dataset_duplicates'
 train_dataset = TrackDataset(train_data_dir)
 train_dataset.set_window_size(window_size)
 train_dataset.set_sample_rate(sample_rate)
@@ -61,7 +61,7 @@ train_loader = DataLoader(train_dataset, batch_size, shuffle=True)
 print("INFO: Train dataset loaded. Length:", len(train_dataset))
 
 # val_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/validation'
-val_data_dir = '/nfs/hpc/share/stemgen/chase_dataset'
+val_data_dir = '/nfs/hpc/share/stemgen/chase_dataset_duplicates'
 val_dataset = TrackDataset(val_data_dir)
 val_dataset.set_window_size(window_size)
 val_dataset.set_sample_rate(sample_rate)
@@ -79,9 +79,11 @@ val_log_every = math.ceil(len(val_loader)/5)                    # log loss ever 
 
 # ---------- Models ----------
 # TODO: Put these models on multiple gpus?
-mert_processor = Wav2Vec2FeatureExtractor.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
-# TODO: Look into checnging sequence length.
-mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True).to("cuda")
+# mert_processor = Wav2Vec2FeatureExtractor.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True)
+# # TODO: Look into checnging sequence length.
+# mert = AutoModel.from_pretrained("m-a-p/MERT-v1-95M", trust_remote_code=True).to("cuda")
+mert_processor = None
+mert = None
 encodec = EncodecWrapper().to(device)
 codebook_size = 1024
 num_q = encodec.num_quantizers
@@ -92,13 +94,13 @@ print("INFO: Encodec and Mert models loaded.")
 # TODO: @jc Add to trainer class? or make tokenizer class.
 res, tgt = train_dataset[0]
 res, tgt = res.unsqueeze(0), tgt.unsqueeze(0)
-semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(res, tgt, mert_processor, mert, encodec, sample_rate, device, num_q)
+mem_tokens, tgt_tokens = get_tokens(res, tgt, mert_processor, mert, encodec, sample_rate, device)
 
-src = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
-tgt = tgt_tokens[:, :-1]
+tgt = tgt_tokens
+mem = mem_tokens
 
-src_emb_dim = src.shape[-1]
-max_len = max(src.shape[1], tgt.shape[1])
+src_emb_dim = mem.shape[-1]
+max_len = max(mem.shape[1], tgt.shape[1])
 
 # Instantiate the model
 model = AudioTransformerDecoder(src_emb_dim, codebook_size, embedding_dim, num_q, hidden_dim, num_layers, num_heads, dropout).to(device)
@@ -120,11 +122,11 @@ for epoch in range(num_epochs):
     pbar = tq.tqdm(desc="Epoch {}".format(epoch+1), total=len(train_loader), unit="steps")
     for i, (residual_audio, tgt_audio) in enumerate(train_loader):
         # get tokens
-        semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, sample_rate, device, num_q)
-        mem = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
+        mem_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, sample_rate, device)
         # trimming extra encodec sample to match Mert.
-        tgt = tgt_tokens[:, :-1]            # [B, timesteps, num_quantizers]
-
+        # tgt = tgt_tokens[:, :-1]            # [B, timesteps, num_quantizers]
+        tgt = tgt_tokens
+        mem = mem_tokens
         optimizer.zero_grad()
 
         predicted_codes = model(mem, tgt, max_len+1, tgt_mask=tgt_mask)  # [B, L, Q, V]
@@ -151,10 +153,10 @@ for epoch in range(num_epochs):
     with torch.no_grad():
         for i, (residual_audio, tgt_audio) in enumerate(val_loader):
             # get tokens
-            semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, sample_rate, device, num_q)
-            mem = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
+            mem_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, sample_rate, device)
             # trimming extra encodec sample to match Mert.
-            tgt = tgt_tokens[:, :-1]            # [B, timesteps, num_quantizers]
+            tgt = tgt_tokens          # [B, timesteps, num_quantizers]
+            mem = mem_tokens            # [B, timesteps, num_quantizers]
 
             predicted_codes = model(mem, tgt, max_len+1, tgt_mask=tgt_mask)  # [B, L, Q, V]
             loss = criterion(predicted_codes.permute(0, 3, 1, 2), tgt_tokens)
@@ -180,10 +182,10 @@ for epoch in range(num_epochs):
             best_loss = loss
 
         if RUN_INFERENCE==1 and (epoch % inf_every == 0 or inf_every == 1):
-                semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(inf_residual_audio.unsqueeze(0), inf_tgt_audio.unsqueeze(0), mert_processor, mert, encodec, sample_rate, device, num_q)
-                mem = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
-                # mem = acoustic_tokens
-                tgt = tgt_tokens[:, :-1] 
+                mem_tokens, tgt_tokens = get_tokens(residual_audio, tgt_audio, mert_processor, mert, encodec, sample_rate, device)
+                # trimming extra encodec sample to match Mert.
+                tgt = tgt_tokens            # [B, timesteps, num_quantizers]
+                mem = mem_tokens 
 
                 generate_bass(model, encodec, mem[0].unsqueeze(0), epoch, num_q, sample_rate, max_len, output_dir, device, k=k, temp=temp)
                 torch.save(model, f"{output_dir}{epoch}_model.pt")
@@ -193,3 +195,7 @@ for epoch in range(num_epochs):
                     # print(f"INFO: saved model to neptune.")
                     runtime["audio_files"].upload_files([f"{output_dir}{epoch}_out.wav"])
                     print(f"INFO: saved audio to neptune.")
+
+if NEPTUNE_SWITCH == 1:
+    runtime["model"].upload("model.pt")
+    print(f"INFO: saved model to neptune.")

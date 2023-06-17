@@ -63,3 +63,4 @@ def generate_bass(model, encodec, mem, sample_idx, num_q, sample_rate, max_len, 
 
     torchaudio.save(f"{output_dir}{sample_idx}_out.wav", pred_wav, sample_rate)
     print(f"INFO: {output_dir}{sample_idx}_out.wav saved.")
+    return pred_wav
