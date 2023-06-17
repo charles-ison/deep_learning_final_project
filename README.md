@@ -1,8 +1,11 @@
 # Conditional Musical Accompaniment Generation
 AI 535 Deep Learning Final Project
 
+## Results Webpage
+https://sites.google.com/oregonstate.edu/ai535final
+
 ## HPC
-Example sun command
+Example srun bash command
 ```srun -p cascades -A cascades --gres=gpu:2 --mem=100G --pty bash```
 
 ## Enviroment
