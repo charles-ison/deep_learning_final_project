@@ -24,15 +24,18 @@ print("torch.cuda.is_available(): " + str(torch.cuda.is_available()))
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 # ---------- params -----------
+model_path = "out/295_model.pt"
+# test_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/test'
+test_data_dir = '/nfs/hpc/share/stemgen/chase_dataset'
+output_dir = "test/"
+
+k=256
+temp=1.0
+
+num_examples = 3
+window_size = 5
 sample_rate = 24000
 num_q = 8
-window_size = 5
-test_data_dir = '/nfs/hpc/share/stemgen/slakh2100_wav_redux/test'
-model_path = "model_chase.pt"
-output_dir = "test/"
-num_examples = 3
-k=1
-temp=1.0
 # -----------------------------
 
 # ---------- Dataset ----------
@@ -67,7 +70,7 @@ for sample_idx in range(num_examples):
     target_audio = target_audio.reshape(1, -1)
 
     # tokens
-    semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, target_audio, mert_processor, mert, encodec, sample_rate, device)
+    semantic_tokens, acoustic_tokens, tgt_tokens = get_tokens(residual_audio, target_audio, mert_processor, mert, encodec, sample_rate, device, num_q)
     mem = torch.cat((acoustic_tokens, semantic_tokens), 2).to(device)
     _, max_len, mem_emb_dim = mem.shape
 

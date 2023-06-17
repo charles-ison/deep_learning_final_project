@@ -10,9 +10,6 @@ def temperature_scaling(logits, temperature):
     # softmax
     scaled_probs = torch.exp(scaled_logits) / torch.sum(torch.exp(scaled_logits), dim=-1, keepdim=True)
 
-    if temperature == 1:
-        return logits
-
     return scaled_probs
 
 
@@ -52,6 +49,11 @@ def generate_bass(model, encodec, mem, sample_idx, num_q, sample_rate, max_len, 
 
             next_token = top_k_sampling(scaled_probs, k)
             
+            # # ------old decode------
+            # # Get the most probable token
+            # next_token = torch.argmax(decoder_output, dim=-1)[:, i]
+            # # ------old decode------
+
             # insert the token to the prediction
             pred[:, i] = next_token
 
