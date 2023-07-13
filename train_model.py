@@ -16,6 +16,7 @@ from modules.positional_encoding import PositionalEncoding
 from modules.generate import generate_bass
 
 RUN_INFERENCE = 1
+SAVE_MODEL_SWITCH = 0
 
 # ---------- neptune ----------
 NEPTUNE_SWITCH = 1
@@ -174,11 +175,12 @@ for epoch in range(num_epochs):
     
         if not best_loss or epoch_loss < best_loss:
             # NOTE: look at alternative model saving strat
-            print("Best loss achieved, saving model.")
-            torch.save(model, "model.pt")
-            if NEPTUNE_SWITCH == 1:
-                runtime["model"].upload("model.pt")
-                print(f"INFO: saved model to neptune.")
+            if SAVE_MODEL_SWITCH == 1:
+                print("Best loss achieved, saving model.")
+                torch.save(model, "model.pt")
+                if NEPTUNE_SWITCH == 1:
+                    runtime["model"].upload("model.pt")
+                    print(f"INFO: saved model to neptune.")
             best_loss = loss
 
         if RUN_INFERENCE==1 and (epoch % inf_every == 0 or inf_every == 1):
@@ -188,11 +190,12 @@ for epoch in range(num_epochs):
                 mem = mem_tokens 
 
                 generate_bass(model, encodec, mem[0].unsqueeze(0), epoch, num_q, sample_rate, max_len, output_dir, device, k=k, temp=temp)
-                torch.save(model, f"{output_dir}{epoch}_model.pt")
-
-                if NEPTUNE_SWITCH == 1:
+                if SAVE_MODEL_SWITCH == 1:
+                    torch.save(model, f"{output_dir}{epoch}_model.pt")
                     # runtime[f"model/{epoch}"].upload(f"{output_dir}{epoch}_model.pt")
                     # print(f"INFO: saved model to neptune.")
+
+                if NEPTUNE_SWITCH == 1:
                     runtime["audio_files"].upload_files([f"{output_dir}{epoch}_out.wav"])
                     print(f"INFO: saved audio to neptune.")
 
